@@ -16,11 +16,11 @@ RewardsService, ScoringService, offers repo + OffersService. 49 tests pass.
 
 ## Remaining backend commits (one at a time)
 9  feat(backend): vision provider interface and mock provider
-10 feat(backend): OpenAI vision provider with strict JSON parsing
-11 feat(backend): custom errors and JSON error handlers
-12 feat(backend): /analyze endpoint with image validation (jpeg/png/webp, ≤5MB, not empty)
+10 feat(backend): custom errors and JSON error handlers
+11 feat(backend): OpenAI vision provider with strict JSON parsing
+12 feat(backend): dependencies and /analyze endpoint with image validation
 13 feat(backend): /score, /offers and /carbon-factors endpoints
-14 test(backend): API tests using mock vision via dependency override
+14 test(backend): API tests using dependency overrides
 15 docs: backend setup, assumptions and API reference in README
 
 ## Working rules
