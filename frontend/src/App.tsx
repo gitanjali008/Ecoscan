@@ -3,11 +3,17 @@ import { useState } from 'react'
 import type { AnalysisResponse } from './api/types'
 import { HowItWorks } from './components/HowItWorks'
 import { Logo } from './components/Logo'
+import { ResultsView } from './components/ResultsView'
 import { ScanPanel } from './components/ScanPanel'
-import { ScanSummary } from './components/ScanSummary'
 
 function App() {
   const [result, setResult] = useState<AnalysisResponse | null>(null)
+
+  // Switching screens: start each one at the top, not where the Scan button was.
+  function show(next: AnalysisResponse | null) {
+    setResult(next)
+    window.scrollTo({ top: 0 })
+  }
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-xl flex-col px-5 pb-10 sm:px-8">
@@ -17,7 +23,7 @@ function App() {
 
       <main className="flex-1 space-y-10">
         {result ? (
-          <ScanSummary result={result} onScanAgain={() => setResult(null)} />
+          <ResultsView result={result} onScanAgain={() => show(null)} />
         ) : (
           <>
             <section className="pt-6 sm:pt-12">
@@ -31,7 +37,7 @@ function App() {
               </p>
             </section>
 
-            <ScanPanel onResult={setResult} />
+            <ScanPanel onResult={show} />
 
             <HowItWorks />
           </>
