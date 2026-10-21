@@ -363,4 +363,41 @@ frontend/src/
 _To be added._
 
 ## 💡 Enhancements
-_To be added: Product Improvements and Technical Scaling._
+
+Each idea builds on seams that already exist in the code: the repository
+interfaces in `backend/app/data/`, the `VisionProvider` interface and its
+`PROVIDERS` registry, the wiring in `dependencies.py`, and settings in `config.py`.
+
+### Technical Scaling
+
+- **Run several API instances behind a load balancer.** The API keeps no per-user state in memory (the data is read-only), so any instance can serve any request. Once users and points exist, they must live in the database (below), not in memory.
+  *Why:* scale out by adding instances, with no sticky sessions.
+- **Cache vision results by image hash (Redis).** Add a `CachingVisionProvider` that wraps the real provider: it looks up the SHA-256 of the image (plus model and prompt version) and calls OpenAI only on a miss. Register it in `PROVIDERS`; routes and services do not change. Cache carbon factors too once they come from a database or API (today `get_carbon_factors` is an in-process `lru_cache`).
+  *Why:* the same photo should never pay for a second GPT call, and repeat scans become instant.
+- **Move vision calls to a background queue.** `POST /api/analyze` returns `202` with a job id, a worker (e.g. Celery, RQ or arq) runs the `AnalysisService`, and the app polls `GET /api/analyze/{job_id}`. Keep `OPENAI_TIMEOUT_SECONDS` and add retries with backoff for `429` and `5xx` only.
+  *Why:* slow model calls no longer tie up web workers, and spikes queue up instead of failing.
+- **Resize images in the browser before upload.** Scale the photo down (e.g. 1600 px on the long side, JPEG quality 0.8) in `src/lib/` before `analyzeImage`.
+  *Why:* less upload data, fewer image tokens per GPT call, and large phone photos no longer hit the 5 MB limit.
+- **Postgres behind the existing repositories.** Write `PostgresCarbonFactors` and `PostgresOffers` with the same methods as `CarbonFactorRepository` and `OfferRepository`, swap them in `dependencies.py`, and add tables for users and an append-only **points ledger**. Keep images in object storage (e.g. S3) with a short retention period, or do not store them at all.
+  *Why:* factors and offers can change without a deploy, and redeeming can really deduct points.
+- **Protect and observe the API.** Add rate limiting per user and IP, strictest on `/api/analyze` because every call costs money. Add structured JSON logs with a request id, metrics (scan latency, vision error rate, cost per scan), error tracking (e.g. Sentry) on both apps, and CI that runs `pytest` and `npm test` on every push.
+  *Why:* limits control cost and abuse, monitoring finds problems before users report them, and CI keeps `main` green.
+
+### Product Improvements
+
+- **A better carbon model.** Add material mix (e.g. 60% cotton and 40% polyester), garment weight or size, country of manufacture, brand data and expected lifetime (cost-per-wear: footprint ÷ expected wears), plus washing impact. Show a range (e.g. 4–7 kg) instead of one number. This extends `DetectedItem` and `CarbonFactorRepository`, and `CarbonService` keeps doing the maths.
+  *Why:* one number per category hides most of the real difference between garments, and a range is more honest.
+- **Real data through APIs.** Use an emission-factor API (e.g. Climatiq) behind `CarbonFactorRepository`, with a cache and the in-memory tables as a fallback. Use brand or retailer product data for materials and weights. Use partner offer APIs behind `OfferRepository`, so that "Redeem" returns a real code.
+  *Why:* numbers and offers stay current without code changes.
+- **Read the care label.** Add an optional second photo of the label. Its text (OCR, or the vision model) gives the exact materials and percentages.
+  *Why:* the label is far more accurate than guessing the material from a photo.
+- **Make the impact tangible and keep users coming back.**
+  - Comparisons such as "8 kg CO2 saved ≈ N km not driven".
+  - A wardrobe history across scans.
+  - Streaks and badges.
+  - A shareable scan card.
+  - Accounts with a points history, built on the points ledger.
+
+  *Why:* kilograms of CO2 are abstract, and progress over time is what changes habits.
+- **Learn from user corrections.** Users can already fix items before recalculating (`EditItemsPanel` → `/api/score`). With consent, log the detected item next to the corrected one. Use these pairs to measure accuracy, add missing words to `CATEGORY_ALIASES`, tune the prompt, and later fine-tune a model.
+  *Why:* every correction becomes free training and evaluation data.
