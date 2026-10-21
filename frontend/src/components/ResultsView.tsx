@@ -1,23 +1,32 @@
+import { useState } from 'react'
+
 import type { AnalysisResponse } from '../api/types'
 import { formatKg } from '../lib/format'
 import { POINTS_PER_KG } from '../lib/rewards'
+import { EditItemsPanel } from './EditItemsPanel'
 import { ItemCard } from './ItemCard'
 import { OffersSection } from './OffersSection'
 import { ResultsSummary } from './ResultsSummary'
 
 type Props = {
   result: AnalysisResponse
+  /** Called with the recalculated result after the user edits the items. */
+  onUpdate: (result: AnalysisResponse) => void
   onScanAgain: () => void
 }
 
-export function ResultsView({ result, onScanAgain }: Props) {
+export function ResultsView({ result, onUpdate, onScanAgain }: Props) {
+  const [editing, setEditing] = useState(false)
+  // True once the user has checked and recalculated the items.
+  const [reviewed, setReviewed] = useState(false)
   const count = result.items.length
+  const itemsLabel = `${count} ${count === 1 ? 'item' : 'items'}`
 
   return (
     <section aria-labelledby="results-title" className="space-y-6 pt-4">
       <div>
         <h1 id="results-title" className="font-display text-3xl font-semibold sm:text-4xl">
-          We found {count} {count === 1 ? 'item' : 'items'}
+          {reviewed ? `Your ${itemsLabel}` : `We found ${itemsLabel}`}
         </h1>
         <p className="mt-2 text-lg text-stone">
           {result.total_saved_kg > 0
@@ -35,13 +44,39 @@ export function ResultsView({ result, onScanAgain }: Props) {
       </p>
 
       <div>
-        <h2 className="font-display text-2xl font-semibold">Your items</h2>
-        <ul className="mt-3 space-y-3">
-          {result.items.map((item, index) => (
-            // Items have no id and the same category can appear twice.
-            <ItemCard key={`${index}-${item.category}`} item={item} />
-          ))}
-        </ul>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="font-display text-2xl font-semibold">{editing ? 'Edit your items' : 'Your items'}</h2>
+          {!editing && (
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              className="min-h-10 rounded-full border border-moss px-4 text-sm font-semibold text-moss hover:bg-moss/10"
+            >
+              Edit items
+            </button>
+          )}
+        </div>
+
+        <div className="mt-3">
+          {editing ? (
+            <EditItemsPanel
+              items={result.items}
+              onCancel={() => setEditing(false)}
+              onSaved={(updated) => {
+                setEditing(false)
+                setReviewed(true)
+                onUpdate(updated)
+              }}
+            />
+          ) : (
+            <ul className="space-y-3">
+              {result.items.map((item, index) => (
+                // Items have no id and the same category can appear twice.
+                <ItemCard key={`${index}-${item.category}`} item={item} showConfidence={!reviewed} />
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
 
       <OffersSection offers={result.offers} />

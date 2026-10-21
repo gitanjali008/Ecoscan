@@ -23,7 +23,7 @@ function App() {
 
       <main className="flex-1 space-y-10">
         {result ? (
-          <ResultsView result={result} onScanAgain={() => show(null)} />
+          <ResultsView result={result} onUpdate={show} onScanAgain={() => show(null)} />
         ) : (
           <>
             <section className="pt-6 sm:pt-12">

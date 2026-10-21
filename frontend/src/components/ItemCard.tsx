@@ -3,7 +3,13 @@ import { capitalize, formatKg } from '../lib/format'
 import { CarbonBar } from './CarbonBar'
 import { ConditionBadge } from './ConditionBadge'
 
-export function ItemCard({ item }: { item: ScoredItem }) {
+type Props = {
+  item: ScoredItem
+  /** False once the user has checked the items: the AI's confidence no longer matters. */
+  showConfidence?: boolean
+}
+
+export function ItemCard({ item, showConfidence = true }: Props) {
   const material = item.material === 'unknown' ? 'Material unknown' : capitalize(item.material)
 
   return (
@@ -21,7 +27,9 @@ export function ItemCard({ item }: { item: ScoredItem }) {
       </div>
 
       <div className="mt-4 flex items-center justify-between border-t border-sand pt-3 text-sm">
-        <span className="text-stone">{Math.round(item.confidence * 100)}% sure</span>
+        <span className="text-stone">
+          {showConfidence ? `${Math.round(item.confidence * 100)}% sure` : 'Checked by you'}
+        </span>
         <span>
           <span className={item.saved_kg > 0 ? 'font-semibold text-moss' : 'text-stone'}>
             {formatKg(item.saved_kg)} saved
