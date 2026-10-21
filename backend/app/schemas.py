@@ -88,3 +88,12 @@ class AnalysisResponse(ScoreResponse):
     """Everything the UI needs after one scan, in a single response."""
 
     offers: OffersResponse
+
+
+class CarbonFactorsResponse(BaseModel):
+    """The carbon assumptions behind every score: actual_kg = base_kg x material x condition."""
+
+    base_kg: dict[str, float] = Field(..., description="kg CO2e for one new item, by category")
+    default_kg: float = Field(..., description="Used for categories not in base_kg")
+    material_factor: dict[str, float] = Field(..., description="Multiplier vs a conventional material (1.0)")
+    condition_factor: dict[str, float] = Field(..., description="Multiplier for new vs second-hand")
