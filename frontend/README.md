@@ -1,32 +1,33 @@
-# React + TypeScript + Vite
+# EcoScan frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+The EcoScan web app: upload or take a photo of clothing, see each item's carbon
+footprint and reward points, fix anything the scan got wrong, and browse offers.
+React 19 + TypeScript, Vite, Tailwind CSS v4. Mobile-first.
 
-Currently, two official plugins are available:
+> For the full setup (backend, environment variables, running both together),
+> see the [root README](../README.md).
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Commands
 
-## React Compiler
+Needs Node.js 22.12+. Run from this folder:
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install      # install dependencies
+npm run dev      # http://localhost:5173, proxies /api to the backend on :8000
+npm run build    # type-check (including tests) and build to dist/
+npm test         # run the Vitest tests once (npm run test:watch to re-run on save)
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Start the backend too, otherwise scans and recalculations will fail.
+
+## Folder structure
+
+```
+src/
+├── api/          the only code that talks to the backend (types, client, ApiError)
+├── components/   small components, one job each; tests sit next to them
+├── lib/          plain helpers: file checks, formatting, error wording
+├── test/         test setup and shared fixtures
+├── App.tsx       switches between the scan screen and the results
+└── index.css     Tailwind and the design tokens (colours, fonts)
+```
