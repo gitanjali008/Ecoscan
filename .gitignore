@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# Secrets (never commit real keys)
+.env
+.env.*
+!.env.example
+
+# Node / frontend
+node_modules/
+dist/
+build/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
