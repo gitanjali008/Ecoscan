@@ -23,9 +23,27 @@ RewardsService, ScoringService, offers repo + OffersService. 49 tests pass.
 14 test(backend): API tests using dependency overrides
 15 docs: backend setup, assumptions and API reference in README
 
+## Frontend plan (one at a time)
+F1 chore(frontend): scaffold Vite + React + TypeScript (done, commit 4f3a523)
+F2 chore(frontend): Tailwind, Vite proxy /api -> localhost:8000, clean template
+F3 feat(frontend): types and API client for backend endpoints
+F4 feat(frontend): image upload and camera capture
+F5 feat(frontend): scan results with per-item carbon and points
+F6 feat(frontend): offers with progress to unlock
+F7 feat(frontend): edit items and rescore, loading and error states
+F8 test(frontend): Vitest + Testing Library tests
+F9 docs: frontend setup and full run guide in README
+
+Frontend rules:
+- TypeScript.
+- Small components in src/components.
+- API calls only in src/api.
+- Mobile-first (camera is mostly used on phones).
+
 ## Working rules
 - Small commits: one commit = one step above. Never combine steps.
 - Every step: write code + tests, run `pytest` from backend/, all must pass.
+- Frontend steps: run npm run build in frontend/ (and npm test from F8 onwards)
 - Before committing, show me the diff and explain what and why in simple Hinglish.
 - Do not commit or push until I say "ok commit".
 - Never commit .env or real API keys.
