@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     app_name: str = "EcoScan API"
     vision_provider: Literal["mock", "openai"] = "mock"
     openai_api_key: str | None = None
+    openai_model: str = "gpt-4o-mini"
+    openai_timeout_seconds: float = 30
     max_image_mb: float = 5
     points_per_kg: float = 10
     cors_origins: str = "http://localhost:5173"
