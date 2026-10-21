@@ -2,6 +2,7 @@ import type { AnalysisResponse } from '../api/types'
 import { formatKg } from '../lib/format'
 import { POINTS_PER_KG } from '../lib/rewards'
 import { ItemCard } from './ItemCard'
+import { OffersSection } from './OffersSection'
 import { ResultsSummary } from './ResultsSummary'
 
 type Props = {
@@ -42,6 +43,8 @@ export function ResultsView({ result, onScanAgain }: Props) {
           ))}
         </ul>
       </div>
+
+      <OffersSection offers={result.offers} />
 
       <button
         type="button"
