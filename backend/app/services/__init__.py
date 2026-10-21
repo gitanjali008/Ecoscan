@@ -1,0 +1,1 @@
+"""Service layer: all business logic lives here, with no HTTP or storage details."""
