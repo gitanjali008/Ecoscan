@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     points_per_kg: float = 10
     cors_origins: str = "http://localhost:5173"
 
+    @property
+    def max_image_bytes(self) -> int:
+        return int(self.max_image_mb * 1024 * 1024)
+
 
 @lru_cache
 def get_settings() -> Settings:
