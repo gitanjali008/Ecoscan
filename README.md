@@ -4,11 +4,13 @@ EcoScan lets you snap or upload a photo of your clothes, identifies each item,
 estimates its carbon footprint, rewards eco-friendly choices with points, and
 shows offers you can unlock with those points.
 
-> 🚧 Work in progress: the backend is complete, the frontend is next.
+> 🚧 Work in progress: backend and frontend are complete, deployment is next.
 
 ## Contents
 - [Tech stack](#-tech-stack)
+- [Quick start](#-quick-start)
 - [Backend setup](#-backend-setup)
+- [Frontend setup](#-frontend-setup)
 - [Running the tests](#-running-the-tests)
 - [API reference](#-api-reference)
 - [Carbon footprint assumptions](#-carbon-footprint-assumptions)
@@ -20,8 +22,34 @@ shows offers you can unlock with those points.
 ## 🔧 Tech stack
 - **Backend**: Python 3.10+, FastAPI, Pydantic
 - **Image recognition**: an OpenAI vision model (default `gpt-4o-mini`), with a mock provider for development and tests
-- **Frontend**: React + Vite
-- **Tests**: pytest
+- **Frontend**: React 19 + TypeScript, Vite, Tailwind CSS v4
+- **Tests**: pytest (backend), Vitest + React Testing Library (frontend)
+
+## ⚡ Quick start
+
+You need **Python 3.10+** and **Node.js 22.12+**. Run the backend and the frontend
+in two terminals, from the repo root:
+
+| Terminal 1: backend | Terminal 2: frontend |
+|---|---|
+| `cd backend` | `cd frontend` |
+| create and activate a venv ([details](#-backend-setup)) | `npm install` |
+| `pip install -r requirements.txt` | `npm run dev` |
+| `copy .env.example .env` (Windows) or `cp .env.example .env` | |
+| `uvicorn app.main:app --reload` | |
+
+Then open **http://localhost:5173**. The frontend sends `/api` requests to the
+backend on port 8000 through the Vite dev proxy, so no extra setup is needed.
+Both run on the mock vision provider by default, without an API key.
+
+### Local URLs
+
+| URL | What |
+|---|---|
+| http://localhost:5173 | The EcoScan app |
+| http://localhost:8000/docs | Interactive API docs (Swagger): try every endpoint in the browser |
+| http://localhost:8000 | Redirects to `/docs` |
+| http://localhost:8000/api/health | Health check, returns `{"status": "ok"}` |
 
 ## 🚀 Backend setup
 
@@ -62,14 +90,41 @@ The default `.env` uses the **mock** vision provider, so the app runs without an
 | `POINTS_PER_KG` | `10` | Reward points per kg of CO2e saved |
 | `CORS_ORIGINS` | `http://localhost:5173` | Comma-separated origins allowed to call the API (the Vite dev server) |
 
-### Local URLs
+## 🎨 Frontend setup
 
-| URL | What |
+Needs **Node.js 22.12 or newer** (22 LTS or later). The app itself runs on Node
+20.19+, but Vitest and jsdom need 22.12+ for the tests.
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+The app opens at http://localhost:5173. Start the backend too (see [Quick start](#-quick-start)).
+
+| Command | What it does |
 |---|---|
-| http://localhost:8000/docs | Interactive API docs (Swagger): try every endpoint in the browser |
-| http://localhost:8000/api/health | Health check, returns `{"status": "ok"}` |
+| `npm run dev` | Dev server with hot reload, proxies `/api` to `http://localhost:8000` |
+| `npm test` | Runs the tests once (`npm run test:watch` re-runs them on save) |
+| `npm run build` | Type-checks (including tests) and builds to `frontend/dist` |
+| `npm run lint` | Lints with oxlint |
+| `npm run preview` | Serves the production build locally |
+
+### Environment variables (`frontend/.env`, optional)
+
+| Variable | Default | What it does |
+|---|---|---|
+| `VITE_API_URL` | `/api` | Where the app sends API requests. Leave it empty locally. Set it when the backend is deployed elsewhere, e.g. `https://ecoscan-api.example.com/api` |
+
+**Trying it on your phone:** run `npm run dev -- --host` and open the "Network"
+URL it prints on your phone (same Wi-Fi). "Take photo" uses the phone's own
+camera app, so it works over plain HTTP. The desktop webcam view needs
+`localhost` or HTTPS, as browsers require for camera access.
 
 ## 🧪 Running the tests
+
+**Backend** (151 tests)
 ```bash
 cd backend
 pytest
@@ -77,6 +132,16 @@ pytest
 Tests never call the real OpenAI API: the OpenAI provider is tested with a fake
 client, and API tests replace the vision provider and settings through
 FastAPI's `dependency_overrides`. They also ignore your local `.env`.
+
+**Frontend** (29 tests)
+```bash
+cd frontend
+npm test
+```
+Tests run in jsdom with React Testing Library. `fetch` and the API client are
+mocked, so the backend does not need to be running. They cover client-side file
+validation, API error parsing, the results summary, offers (including redeeming)
+and editing items before recalculating.
 
 ## 📡 API reference
 
@@ -236,7 +301,63 @@ backend/
 - **No database**, as the brief requires: all data lives in memory.
 
 ## 🖥️ Frontend
-_To be added._
+
+A mobile-first single page: most people will scan clothes with a phone camera.
+
+### Screenshots
+
+<!-- Add screenshots to docs/screenshots/ and replace the placeholders below, e.g.
+     ![Upload screen](docs/screenshots/upload.png) -->
+
+| Upload | Results | Rewards |
+|---|---|---|
+| _Screenshot coming soon: upload or take a photo_ | _Screenshot coming soon: per-item carbon and points_ | _Screenshot coming soon: offers and progress_ |
+
+### User flow
+1. **Add a photo**: drag and drop, "Choose photo", or "Take photo" (the phone's
+   camera, or a webcam view on desktop). The file type and size are checked
+   before uploading.
+2. **Scan**: a friendly loading message while the backend analyses the photo. The scan can be cancelled.
+3. **Results**: totals for carbon, CO2 saved and points, then one card per item
+   comparing its footprint with buying it new.
+4. **Fix mistakes**: edit an item's type, material or condition, or remove it,
+   then recalculate. This calls `/api/score` and `/api/offers`.
+5. **Rewards**: offers ready to redeem, and progress bars for the rest.
+
+Every backend error code has its own message, with "Try again" only where a retry can help.
+
+### Frontend structure
+
+```
+frontend/src/
+├── api/                 the only code that talks to the backend
+│   ├── config.ts            API_BASE from VITE_API_URL (default "/api")
+│   ├── types.ts             TypeScript versions of the backend schemas
+│   └── client.ts            analyzeImage, scoreItems, getOffers, getCarbonFactors + ApiError
+├── components/          small components, one job each
+│   ├── ScanPanel.tsx        photo → preview → scan, with loading and errors
+│   ├── PhotoPicker.tsx      drag and drop, choose photo, take photo
+│   ├── CameraModal.tsx      desktop webcam capture
+│   ├── ResultsView.tsx      summary, items, edit mode and offers
+│   ├── EditItemsPanel.tsx   edit or remove items, then recalculate
+│   ├── OffersSection.tsx    ready to redeem and almost there
+│   └── ...                  cards, bars, badges, toast, error notice
+├── lib/                 plain helpers: file checks, formatting, error wording
+├── test/                test setup and shared fixtures
+├── App.tsx              switches between the scan screen and the results
+└── index.css            Tailwind and the design tokens
+```
+
+**Design decisions:**
+- **API calls only in `src/api`.** Components never call `fetch`. Every failure becomes one `ApiError` with a `code`, so the UI handles errors in one way.
+- **Types mirror the backend schemas**, so a renamed field is caught when you build, not by a user.
+- **Design tokens in one place.** Colours and fonts live in `@theme` in `index.css`.
+  Colours have a meaning across the app: clay = CO2, fern and moss = savings, ochre = points.
+- **The backend has the final word.** The client repeats the file checks only to give faster
+  feedback. Carbon and points always come from the API.
+- **Accessible by default.** Real buttons and labels, a native `<dialog>` for the
+  camera, `role="progressbar"`, `role="alert"` and `role="status"` for live updates.
+  Tests find elements the same way a screen reader would.
 
 ## ☁️ Deployment
 _To be added._
