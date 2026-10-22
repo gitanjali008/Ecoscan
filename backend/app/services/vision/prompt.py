@@ -43,10 +43,19 @@ class _VisionReply(BaseModel):
     items: list[Any]
 
 
+def _strip_code_fence(content: str) -> str:
+    """Models sometimes wrap JSON in ```json ... ``` even in JSON mode."""
+    text = content.strip()
+    if text.startswith("```") and text.endswith("```") and "\n" in text:
+        # Drop the opening line (``` or ```json) and the closing ```.
+        text = text[text.index("\n") + 1 : -3]
+    return text
+
+
 def parse_items(content: str) -> list[DetectedItem]:
     """Turn the model's JSON reply into items, skipping any item that is invalid."""
     try:
-        reply = _VisionReply.model_validate_json(content)
+        reply = _VisionReply.model_validate_json(_strip_code_fence(content))
     except ValidationError as exc:
         raise VisionServiceError("The image recognition service returned an unreadable answer.") from exc
 

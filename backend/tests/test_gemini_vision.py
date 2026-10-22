@@ -142,3 +142,63 @@ def test_default_model_is_a_gemini_flash_model(monkeypatch):
     monkeypatch.delenv("GEMINI_MODEL", raising=False)
 
     assert "flash" in settings().gemini_model
+
+
+# Debugging: the real reason must reach the log, never the key or the image.
+
+@pytest.mark.parametrize("text", ['```json\n{"items": [{"category": "jeans"}]}\n```', '```\n{"items": [{"category": "jeans"}]}\n```'])
+def test_json_in_a_code_fence_is_parsed(text):
+    provider, _ = provider_replying(text)
+
+    assert [i.category for i in provider.detect_items(b"img", "image/jpeg")] == ["jeans"]
+
+
+def test_api_error_is_logged_with_its_type_and_message_but_not_the_key(caplog):
+    caplog.set_level("WARNING", logger="uvicorn.error")
+    error = errors.ClientError(400, {"error": {"code": 400, "message": "API key not valid. key=AIza-secret", "status": "INVALID_ARGUMENT"}})
+    provider = GeminiVisionProvider(model="m", api_key="AIza-secret", client=FakeClient(error=error))
+
+    with pytest.raises(VisionServiceError):
+        provider.detect_items(b"\x89PNG secret-image-bytes", "image/png")
+
+    assert "Gemini request failed: ClientError: 400 INVALID_ARGUMENT" in caplog.text
+    assert "API key not valid" in caplog.text
+    assert "AIza-secret" not in caplog.text
+    assert "secret-image-bytes" not in caplog.text
+
+
+def test_timeout_is_logged(caplog):
+    caplog.set_level("WARNING", logger="uvicorn.error")
+    provider = GeminiVisionProvider(model="m", client=FakeClient(error=httpx.ReadTimeout("timed out", request=REQUEST)))
+
+    with pytest.raises(VisionServiceError):
+        provider.detect_items(b"img", "image/jpeg")
+
+    assert "Gemini request failed: ReadTimeout: timed out" in caplog.text
+
+
+@pytest.mark.parametrize("response, reason", [
+    (SimpleNamespace(text=None, prompt_feedback=SimpleNamespace(block_reason="SAFETY"), candidates=None), "blocked: SAFETY"),
+    (SimpleNamespace(text=None, prompt_feedback=None, candidates=[SimpleNamespace(finish_reason="MAX_TOKENS")]), "finish reason: MAX_TOKENS"),
+    (SimpleNamespace(text=None), "no candidates"),
+])
+def test_empty_answer_logs_why(caplog, response, reason):
+    caplog.set_level("WARNING", logger="uvicorn.error")
+    client = FakeClient()
+    client.models.generate_content = lambda **kwargs: response
+    provider = GeminiVisionProvider(model="m", client=client)
+
+    with pytest.raises(VisionServiceError):
+        provider.detect_items(b"img", "image/jpeg")
+
+    assert f"Gemini returned no text ({reason})" in caplog.text
+
+
+def test_unreadable_answer_is_logged(caplog):
+    caplog.set_level("WARNING", logger="uvicorn.error")
+    provider, _ = provider_replying("Sorry, I can't help with that.")
+
+    with pytest.raises(VisionServiceError):
+        provider.detect_items(b"img", "image/jpeg")
+
+    assert "Gemini returned an unreadable answer: \"Sorry, I can't help with that.\"" in caplog.text

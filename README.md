@@ -141,6 +141,8 @@ The backend reads photos with one of three **vision providers**, chosen with
 The free tier needs no billing account, but it has daily and per-minute request
 limits (see [Gemini rate limits](https://ai.google.dev/gemini-api/docs/rate-limits)).
 When a limit is hit, the scan fails with a friendly "try again" message (`502 vision_service_error`).
+**If scans fail,** the backend terminal shows the real reason (never the key), e.g.
+`WARNING: Gemini request failed: ClientError: 400 INVALID_ARGUMENT ... API key not valid`.
 
 ### `.env` settings
 
@@ -223,7 +225,7 @@ camera app, so it works over plain HTTP. The desktop webcam view needs
 
 ## 🧪 Running the tests
 
-**Backend** (300 tests)
+**Backend** (310 tests)
 ```bash
 cd backend
 pytest

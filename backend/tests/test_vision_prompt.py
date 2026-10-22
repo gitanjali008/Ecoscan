@@ -1,7 +1,10 @@
 import json
 import re
 
+import pytest
+
 from app.data.carbon_factors import BASE_CARBON_KG, InMemoryCarbonFactors
+from app.errors import VisionServiceError
 from app.services.vision.prompt import build_system_prompt, parse_items
 
 PROMPT = build_system_prompt(InMemoryCarbonFactors().categories())
@@ -40,3 +43,12 @@ def test_asks_for_every_item_and_the_rules():
 
 def test_without_categories_the_prompt_still_reads_well():
     assert build_system_prompt([]).endswith("Known categories: (none)")
+
+
+def test_parse_items_accepts_json_in_a_code_fence():
+    assert [i.category for i in parse_items('```json\n{"items": [{"category": "saree"}]}\n```')] == ["saree"]
+
+
+def test_parse_items_still_rejects_a_broken_fence():
+    with pytest.raises(VisionServiceError):
+        parse_items('```json\n{"items": [')
