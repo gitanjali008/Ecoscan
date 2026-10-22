@@ -18,6 +18,8 @@ Frontend rules:
 - Mobile-first (camera is mostly used on phones).
 
 ## Status
+Project: complete. Not deployed; runs locally (README → Deployment).
+
 Backend: done. 276 pytest tests pass. Endpoints:
 - GET  /                     redirects to /docs
 - GET  /api/health
@@ -30,7 +32,8 @@ Vision: mock (default), OpenAI or Gemini, chosen with VISION_PROVIDER.
 Frontend: done (F1–F9). 48 Vitest tests pass. Upload or camera capture
 (resized to a JPEG in the browser), results per item, edit and rescore, offers with progress, loading and error states.
 
-Next: Deployment and Enhancements sections in README, screenshots.
+README: done (setup, tests, API, carbon assumptions, eco tips, structure,
+screenshots in docs/screenshots/, deployment plan, enhancements).
 
 ## Working rules
 - Small commits: one commit = one step. Never combine steps.

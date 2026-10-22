@@ -4,7 +4,7 @@ EcoScan lets you snap or upload a photo of your clothes, identifies each item,
 estimates its carbon footprint, rewards eco-friendly choices with points, and
 shows offers you can unlock with those points.
 
-> 🚧 Work in progress: backend and frontend are complete, deployment is next.
+> ✅ Complete: backend and frontend are done and tested. Not deployed: run it locally (see [Quick start](#-quick-start)).
 
 ## Contents
 - [Tech stack](#-tech-stack)
@@ -407,7 +407,8 @@ backend/
   interface (`detect_items(image, content_type) -> list[DetectedItem]`). Changing
   model means a new class plus one entry in `PROVIDERS`, chosen with `VISION_PROVIDER`.
 - **Model output is never trusted blindly.** Both the OpenAI and Gemini providers send
-  the same prompt (`vision/prompt.py`), and the reply must be JSON checked with Pydantic. Invalid items are skipped, and a broken reply becomes a clean `502`.
+  the same prompt (`vision/prompt.py`), and the reply must be JSON checked with Pydantic.
+  Invalid items are skipped, and a broken reply becomes a clean `502`.
 - **Easy to test.** Services get their dependencies through `__init__`, so tests
   pass in fakes. API tests swap dependencies with `dependency_overrides`.
 - **No database**, as the brief requires: all data lives in memory.
@@ -418,12 +419,10 @@ A mobile-first single page: most people will scan clothes with a phone camera.
 
 ### Screenshots
 
-<!-- Add screenshots to docs/screenshots/ and replace the placeholders below, e.g.
-     ![Upload screen](docs/screenshots/upload.png) -->
-
-| Upload | Results | Rewards |
+| Upload | Results | Offers |
 |---|---|---|
-| _Screenshot coming soon: upload or take a photo_ | _Screenshot coming soon: per-item carbon and points_ | _Screenshot coming soon: offers and progress_ |
+| <img src="docs/screenshots/01-upload.png" alt="EcoScan home screen with the photo upload area and How it works steps" width="260"> | <img src="docs/screenshots/02-results.png" alt="Scan results with totals, item cards with eco tips, and rewards" width="260"> | <img src="docs/screenshots/03-offers.png" alt="Rewards: an offer ready to redeem and progress bars for locked offers" width="260"> |
+| Take or choose a photo of your clothes. | Totals, then one card per item with its footprint, points and an eco tip. The banner shows these are sample results from the mock provider. | Offers ready to redeem, and how many more points unlock the rest. |
 
 ### User flow
 1. **Add a photo**: drag and drop, "Choose photo", or "Take photo" (the phone's
@@ -473,7 +472,13 @@ frontend/src/
   Tests find elements the same way a screen reader would.
 
 ## ☁️ Deployment
-_To be added._
+
+**Not deployed: run it locally** (see [Quick start](#-quick-start) and [Backend setup](#-backend-setup)).
+
+How it would deploy:
+- **Backend on Render:** a Python web service with root directory `backend`, build command `pip install -r requirements.txt` and start command `uvicorn app.main:app --host 0.0.0.0 --port $PORT`. The [environment variables](#environment-variables-backendenv) are set in Render's dashboard (e.g. `VISION_PROVIDER=gemini` and `GEMINI_API_KEY`), never in the repo.
+- **Frontend on Vercel:** root directory `frontend`, build command `npm run build`, output `dist`. Set `VITE_API_URL` to the backend's URL plus `/api` (e.g. `https://ecoscan-api.onrender.com/api`). It is read at build time, so redeploy after changing it.
+- **CORS:** set the backend's `CORS_ORIGINS` to the frontend's URL (e.g. `https://ecoscan.vercel.app`), so the browser lets the app call the API.
 
 ## 💡 Enhancements
 
@@ -485,13 +490,13 @@ interfaces in `backend/app/data/`, the `VisionProvider` interface and its
 
 - **Run several API instances behind a load balancer.** The API keeps no per-user state in memory (the data is read-only), so any instance can serve any request. Once users and points exist, they must live in the database (below), not in memory.
   *Why:* scale out by adding instances, with no sticky sessions.
-- **Cache vision results by image hash (Redis).** Add a `CachingVisionProvider` that wraps the real provider: it looks up the SHA-256 of the image (plus model and prompt version) and calls OpenAI only on a miss. Register it in `PROVIDERS`; routes and services do not change. Cache carbon factors too once they come from a database or API (today `get_carbon_factors` is an in-process `lru_cache`).
-  *Why:* the same photo should never pay for a second GPT call, and repeat scans become instant.
-- **Move vision calls to a background queue.** `POST /api/analyze` returns `202` with a job id, a worker (e.g. Celery, RQ or arq) runs the `AnalysisService`, and the app polls `GET /api/analyze/{job_id}`. Keep `OPENAI_TIMEOUT_SECONDS` and add retries with backoff for `429` and `5xx` only.
+- **Cache vision results by image hash (Redis).** Add a `CachingVisionProvider` that wraps the real provider: it looks up the SHA-256 of the image (plus model and prompt version) and calls the vision model only on a miss. Register it in `PROVIDERS`; routes and services do not change. Cache carbon factors too once they come from a database or API (today `get_carbon_factors` is an in-process `lru_cache`).
+  *Why:* the same photo never uses up a second model call (or free-tier quota), and repeat scans become instant.
+- **Move vision calls to a background queue.** `POST /api/analyze` returns `202` with a job id, a worker (e.g. Celery, RQ or arq) runs the `AnalysisService`, and the app polls `GET /api/analyze/{job_id}`. Keep the provider timeouts (`GEMINI_TIMEOUT_SECONDS`, `OPENAI_TIMEOUT_SECONDS`) and add retries with backoff for `429` and `5xx` only.
   *Why:* slow model calls no longer tie up web workers, and spikes queue up instead of failing.
 - **Postgres behind the existing repositories.** Write `PostgresCarbonFactors` and `PostgresOffers` with the same methods as `CarbonFactorRepository` and `OfferRepository`, swap them in `dependencies.py`, and add tables for users and an append-only **points ledger**. Keep images in object storage (e.g. S3) with a short retention period, or do not store them at all.
   *Why:* factors and offers can change without a deploy, and redeeming can really deduct points.
-- **Protect and observe the API.** Add rate limiting per user and IP, strictest on `/api/analyze` because every call costs money. Add structured JSON logs with a request id, metrics (scan latency, vision error rate, cost per scan), error tracking (e.g. Sentry) on both apps, and CI that runs `pytest` and `npm test` on every push.
+- **Protect and observe the API.** Add rate limiting per user and IP, strictest on `/api/analyze` because every call uses paid or rate-limited model requests. Add structured JSON logs with a request id, metrics (scan latency, vision error rate, cost per scan), error tracking (e.g. Sentry) on both apps, and CI that runs `pytest` and `npm test` on every push.
   *Why:* limits control cost and abuse, monitoring finds problems before users report them, and CI keeps `main` green.
 
 ### Product Improvements
