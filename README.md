@@ -29,8 +29,9 @@ shows offers you can unlock with those points.
 
 ## ⚡ Quick start
 
-You need **Python 3.10+** and **Node.js 22.12+**. Both ways below run on the mock
-vision provider by default, without an API key.
+You need **Python 3.10+** and **Node.js 20.19+** (22.22+ or 24.15+ to run the
+frontend tests). Both ways below run on the mock vision provider by default,
+without an API key.
 
 ### Quick run (one server)
 
@@ -115,7 +116,7 @@ The default `.env` uses the **mock** vision provider, so the app runs without an
 | `OPENAI_MODEL` | `gpt-4o-mini` | Any OpenAI model that accepts images and JSON mode |
 | `OPENAI_TIMEOUT_SECONDS` | `30` | Timeout for one OpenAI request |
 | `GEMINI_API_KEY` | *(empty)* | Required when `VISION_PROVIDER=gemini`. Get a free key in [Google AI Studio](https://aistudio.google.com/apikey). Never commit it. |
-| `GEMINI_MODEL` | `gemini-3.8-flash` | Any Gemini model that accepts images and JSON output |
+| `GEMINI_MODEL` | `gemini-3.8-flash` | Any Gemini model that accepts images and JSON output, e.g. the lighter `gemini-3.5-flash-lite` |
 | `GEMINI_TIMEOUT_SECONDS` | `30` | Timeout for one Gemini request |
 | `MAX_IMAGE_MB` | `10` | Largest upload accepted (a safety net: the web app sends resized JPEGs, usually under 1 MB) |
 | `POINTS_PER_KG` | `10` | Reward points per kg of CO2e saved |
@@ -150,7 +151,7 @@ When a limit is hit, the scan fails with a friendly "try again" message (`502 vi
 ```env
 VISION_PROVIDER=gemini
 GEMINI_API_KEY=your-key-here
-# Optional: GEMINI_MODEL=gemini-3.8-flash, GEMINI_TIMEOUT_SECONDS=30
+# Optional: GEMINI_MODEL=gemini-3.8-flash (or gemini-3.5-flash-lite), GEMINI_TIMEOUT_SECONDS=30
 ```
 
 **OpenAI:**
@@ -167,8 +168,9 @@ VISION_PROVIDER=mock
 
 `backend/.env` is in `.gitignore`, so your key is never committed. Only
 `.env.example`, with empty keys, is in the repo. If a provider is selected
-without its key, the backend still starts, but scans fail with a `500` and the
-server log shows a clear error (e.g. `GEMINI_API_KEY is required when VISION_PROVIDER=gemini`).
+without its key, the backend still starts but logs a warning
+(`VISION_PROVIDER=gemini but GEMINI_API_KEY is empty: scans will fail.`), and
+scans fail with a `500`.
 
 ### How a scan works
 
@@ -195,8 +197,8 @@ shows the label as each item's title, with the category underneath.
 
 ## 🎨 Frontend setup
 
-Needs **Node.js 22.12 or newer** (22 LTS or later). The app itself runs on Node
-20.19+, but Vitest and jsdom need 22.12+ for the tests.
+Needs **Node.js 20.19+** to install, run and build the app (Vite's minimum).
+The tests need **22.22+ or 24.15+**, the minimum versions Vitest and jsdom support.
 
 ```bash
 cd frontend
@@ -284,27 +286,32 @@ only a safety net. Originals over 30 MB are refused in the browser.
 <details>
 <summary>Example <code>/api/analyze</code> response (lists shortened)</summary>
 
+A fresh scan: every item starts as `"new"`, so nothing is saved yet and the tip
+says what marking it second-hand would earn.
+
 ```json
 {
   "items": [
-    {"category": "jeans", "material": "cotton", "condition": "second-hand", "confidence": 0.91,
+    {"category": "jeans", "material": "cotton", "condition": "new", "confidence": 0.91,
      "label": "faded blue straight-leg jeans",
-     "baseline_kg": 10.0, "actual_kg": 2.0, "saved_kg": 8.0, "points": 80,
-     "tip": "Great choice! Buying it second-hand saved about 8 kg of CO2."}
+     "baseline_kg": 10.0, "actual_kg": 10.0, "saved_kg": 0.0, "points": 0,
+     "tip": "Bought second-hand, this would save 8 kg CO2 (+80 pts). Organic cotton would save about 3 kg."}
   ],
-  "total_carbon_kg": 2.0,
-  "total_saved_kg": 8.0,
-  "total_points": 80,
+  "total_carbon_kg": 10.0,
+  "total_saved_kg": 0.0,
+  "total_points": 0,
   "offers": {
-    "points": 80,
-    "eligible": [{"id": "swap-pass", "title": "Free clothing swap entry", "partner": "Swap Circle",
-                  "description": "...", "points_required": 30}],
-    "locked": [{"id": "repair-free", "title": "Free clothing repair", "partner": "StitchBack Repairs",
-                "description": "...", "points_required": 100, "points_needed": 20}]
+    "points": 0,
+    "eligible": [],
+    "locked": [{"id": "swap-pass", "title": "Free clothing swap entry", "partner": "Swap Circle",
+                "description": "...", "points_required": 30, "points_needed": 30}]
   },
   "provider": "gemini"
 }
 ```
+
+After the user marks the jeans second-hand, `/api/score` returns `"actual_kg": 2.0`,
+`"saved_kg": 8.0`, `"points": 80` and the tip "Great choice! Buying it second-hand saved about 8 kg of CO2."
 </details>
 
 ## 🌱 Carbon footprint assumptions
@@ -326,7 +333,8 @@ producing it: growing or making the fibre, dyeing and manufacturing. Buying
 second-hand avoids almost all of that, and lower-impact materials avoid part of it.
 Points reward the choice the user made compared with buying the same item new.
 
-**Example:** second-hand jeans → `10 × 1.0 × 0.2 = 2 kg`, saved `10 − 2 = 8 kg` → **80 points**.
+**Example:** cotton jeans marked second-hand → `10 × 1.0 × 0.2 = 2 kg`, saved `10 − 2 = 8 kg` → **80 points**.
+Organic cotton jeans bought new → `10 × 0.7 × 1.0 = 7 kg`, saved `3 kg` → **30 points**.
 
 A higher-impact material (e.g. wool, factor 1.3) raises `actual_kg` but never gives negative savings or points.
 
@@ -369,7 +377,11 @@ The most specific match wins: "organic cotton" uses 0.7, not cotton's 1.0.
 | new | 1.0 | Full production impact |
 | second-hand | 0.2 | Assumes reuse avoids about 80% of the impact. The remaining 0.2 stands for shipping, washing and the item's share of its first life. |
 
-"used", "thrifted", "vintage" and "pre-owned" all count as second-hand.
+**The condition comes from the user, not the photo.** A photo can't prove an item
+was bought second-hand, so every scanned item starts as `new` (factor 1.0, nothing
+saved). Each item card has **New / Second-hand** chips: choosing Second-hand
+rescores the item with factor 0.2 and adds its points. `/api/score` also accepts
+"used", "thrifted", "vintage" and "pre-owned" as second-hand.
 
 The live values are always available at `GET /api/carbon-factors`. The category
 list is also sent to the vision model, so it picks names this table knows.
@@ -383,7 +395,7 @@ the first rule that applies writes the tip.
 
 | # | Rule | When | Example |
 |---|---|---|---|
-| 1 | Second-hand | The item is second-hand | "Great choice! Buying it second-hand saved about 8 kg of CO2." |
+| 1 | Second-hand | The user marked the item second-hand | "Great choice! Buying it second-hand saved about 8 kg of CO2." |
 | 2 | Low-impact material | New, material factor below 1 (organic cotton, linen, hemp…) | "Nice pick! Organic cotton saved about 1.5 kg of CO2 compared with a conventional material." |
 | 3 | Would save second-hand | Everything else: new, nothing saved (always applies) | "Bought second-hand, this would save 8 kg CO2 (+80 pts). Organic cotton would save about 3 kg." |
 
@@ -410,7 +422,7 @@ backend/
 │   ├── dependencies.py      wires repositories and services together
 │   ├── api/routes.py        HTTP only: validate, call a service, return a schema
 │   ├── services/            all business logic
-│   │   ├── analysis.py          one scan: validate → detect → score → offers
+│   │   ├── analysis.py          one scan: validate → detect (all items start new) → score → offers
 │   │   ├── image_validation.py  type, size and file-signature checks
 │   │   ├── carbon.py            carbon per item
 │   │   ├── rewards.py           saved kg → points
@@ -439,6 +451,9 @@ backend/
 - **Swap the AI model easily.** Everything depends on the `VisionProvider`
   interface (`detect_items(image, content_type) -> list[DetectedItem]`). Changing
   model means a new class plus one entry in `PROVIDERS`, chosen with `VISION_PROVIDER`.
+- **The model only reports what a photo can show.** It names the item, material and
+  label; it is not asked how the item was bought. Every item starts as new and the
+  user chooses second-hand, so points come from the user's real choices, not a guess.
 - **Model output is never trusted blindly.** Both the OpenAI and Gemini providers send
   the same prompt (`vision/prompt.py`), and the reply must be JSON checked with Pydantic.
   Invalid items are skipped, and a broken reply becomes a clean `502`.
@@ -457,6 +472,10 @@ A mobile-first single page: most people will scan clothes with a phone camera.
 | <img src="docs/screenshots/01-upload.png" alt="EcoScan home screen with the photo upload area and How it works steps" width="260"> | <img src="docs/screenshots/02-results.png" alt="Scan results with totals, item cards with eco tips, and rewards" width="260"> | <img src="docs/screenshots/03-offers.png" alt="Rewards: an offer ready to redeem and progress bars for locked offers" width="260"> |
 | Take or choose a photo of your clothes. | Totals, then one card per item with its footprint, points and an eco tip. The banner shows these are sample results from the mock provider. | Offers ready to redeem, and how many more points unlock the rest. |
 
+_The results and offers screenshots were taken before the New / Second-hand chips
+were added: today each card also asks "How did you get it?", and a fresh scan
+starts with every item on New._
+
 ### User flow
 1. **Add a photo**: drag and drop, "Choose photo", or "Take photo" (the phone's
    camera, or a webcam view on desktop). The file type and size are checked
@@ -466,9 +485,9 @@ A mobile-first single page: most people will scan clothes with a phone camera.
    its label (e.g. "Red floral midi dress"), its footprint compared with buying it
    new, and an eco tip. Sample results from the mock provider show a "Demo mode" banner.
 4. **"How did you get it?"**: a photo can't show whether an item was bought
-   second-hand, so each card has **New / Second-hand** chips, pre-selected from the
-   scan. Changing one rescores right away (`/api/score` and `/api/offers`) and
-   updates the item, the totals and the offers.
+   second-hand, so every item starts on **New**, with **New / Second-hand** chips
+   on each card. Changing one rescores right away (`/api/score` and `/api/offers`),
+   with a small "Updating…" state, and updates the item, the totals and the offers.
 5. **Fix mistakes**: "Edit items" changes an item's type, material or condition,
    or removes it, then recalculates.
 6. **Rewards**: offers ready to redeem, and progress bars for the rest. With no
@@ -492,7 +511,7 @@ frontend/src/
 │   ├── ResultsView.tsx      summary, items, edit mode and offers
 │   ├── EditItemsPanel.tsx   edit or remove items, then recalculate
 │   ├── OffersSection.tsx    ready to redeem and almost there
-│   └── ...                  cards, bars, badges, toast, error notice
+│   └── ...                  item card with New / Second-hand chips, bars, toast, error notice
 ├── lib/                 plain helpers: file checks, formatting, error wording
 ├── test/                test setup and shared fixtures
 ├── App.tsx              switches between the scan screen and the results
@@ -540,7 +559,7 @@ interfaces in `backend/app/data/`, the `VisionProvider` interface and its
 
 ### Product Improvements
 
-- **A better carbon model.** Add material mix (e.g. 60% cotton and 40% polyester), garment weight or size, country of manufacture, brand data and expected lifetime (cost-per-wear: footprint ÷ expected wears), plus washing impact. Show a range (e.g. 4–7 kg) instead of one number. This extends `DetectedItem` and `CarbonFactorRepository`, and `CarbonService` keeps doing the maths.
+- **A better carbon model.** Add material mix (e.g. 60% cotton and 40% polyester), garment weight or size, country of manufacture, brand data and expected lifetime (cost-per-wear: footprint ÷ expected wears), plus washing impact. Make garment condition richer than new / second-hand: "like new", "worn", "repaired" or "upcycled" each extend an item's life by a different amount, and a repair could earn points too. Show a range (e.g. 4–7 kg) instead of one number. This extends `DetectedItem` and `CarbonFactorRepository`, and `CarbonService` keeps doing the maths.
   *Why:* one number per category hides most of the real difference between garments, and a range is more honest.
 - **Real data through APIs.** Use an emission-factor API (e.g. Climatiq) behind `CarbonFactorRepository`, with a cache and the in-memory tables as a fallback. Use brand or retailer product data for materials and weights. Use partner offer APIs behind `OfferRepository`, so that "Redeem" returns a real code.
   *Why:* numbers and offers stay current without code changes.
@@ -554,5 +573,5 @@ interfaces in `backend/app/data/`, the `VisionProvider` interface and its
   - Accounts with a points history, built on the points ledger.
 
   *Why:* kilograms of CO2 are abstract, and progress over time is what changes habits.
-- **Learn from user corrections.** Users can already fix items before recalculating (`EditItemsPanel` → `/api/score`). With consent, log the detected item next to the corrected one. Use these pairs to measure accuracy, add missing words to `CATEGORY_ALIASES`, tune the prompt, and later fine-tune a model.
+- **Learn from user corrections.** Users can already mark items second-hand with the chips and fix items with "Edit items" (both → `/api/score`). With consent, log the detected item next to the corrected one. Use these pairs to measure accuracy, add missing words to `CATEGORY_ALIASES`, tune the prompt, and later fine-tune a model.
   *Why:* every correction becomes free training and evaluation data.
