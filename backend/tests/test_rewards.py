@@ -5,6 +5,7 @@ from app.schemas import DetectedItem
 from app.services.carbon import CarbonService
 from app.services.rewards import RewardsService
 from app.services.scoring import ScoringService
+from app.services.tips import EcoTipService
 
 rewards = RewardsService(points_per_kg=10)
 
@@ -32,7 +33,9 @@ def test_points_per_kg_must_be_positive():
         RewardsService(points_per_kg=0)
 
 
-scoring = ScoringService(CarbonService(InMemoryCarbonFactors()), rewards)
+factors = InMemoryCarbonFactors()
+carbon = CarbonService(factors)
+scoring = ScoringService(carbon, rewards, EcoTipService(carbon, factors))
 
 
 def test_scoring_combines_carbon_and_points():
@@ -47,6 +50,7 @@ def test_scoring_combines_carbon_and_points():
     assert response.total_carbon_kg == 5.5
     assert response.total_saved_kg == 9.5
     assert response.total_points == 95
+    assert all(i.tip for i in response.items)
 
 
 def test_scoring_with_no_savings_gives_zero_points():

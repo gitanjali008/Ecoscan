@@ -127,7 +127,7 @@ camera app, so it works over plain HTTP. The desktop webcam view needs
 
 ## 🧪 Running the tests
 
-**Backend** (257 tests)
+**Backend** (275 tests)
 ```bash
 cd backend
 pytest
@@ -153,8 +153,8 @@ All endpoints are under `/api`.
 | Method | Path | Input | Output | Error codes |
 |---|---|---|---|---|
 | `GET` | `/api/health` | none | `{"status": "ok"}` | none |
-| `POST` | `/api/analyze` | multipart form, field `file`: JPEG, PNG or WebP, max 10 MB | Items with carbon and points, totals, and offers | `400 empty_image`, `413 image_too_large`, `415 invalid_image`, `422 no_clothing_detected`, `422 validation_error`, `502 vision_service_error` |
-| `POST` | `/api/score` | JSON `{"items": [{"category", "material", "condition", "confidence", "label"}]}`, at least one item (only `category` is required) | Items with carbon and points, and totals | `422 validation_error` |
+| `POST` | `/api/analyze` | multipart form, field `file`: JPEG, PNG or WebP, max 10 MB | Items with carbon, points and a tip, totals, and offers | `400 empty_image`, `413 image_too_large`, `415 invalid_image`, `422 no_clothing_detected`, `422 validation_error`, `502 vision_service_error` |
+| `POST` | `/api/score` | JSON `{"items": [{"category", "material", "condition", "confidence", "label"}]}`, at least one item (only `category` is required) | Items with carbon, points and a tip, and totals | `422 validation_error` |
 | `GET` | `/api/offers?points=<int ≥ 0>` | Query `points` | `{"points", "eligible": [...], "locked": [... with points_needed]}` | `422 validation_error` |
 | `GET` | `/api/carbon-factors` | none | The carbon tables below, as JSON | none |
 
@@ -185,7 +185,8 @@ only a safety net. Originals over 30 MB are refused in the browser.
   "items": [
     {"category": "jeans", "material": "cotton", "condition": "second-hand", "confidence": 0.91,
      "label": "faded blue straight-leg jeans",
-     "baseline_kg": 10.0, "actual_kg": 2.0, "saved_kg": 8.0, "points": 80}
+     "baseline_kg": 10.0, "actual_kg": 2.0, "saved_kg": 8.0, "points": 80,
+     "tip": "Great choice! Buying it second-hand saved about 8 kg of CO2."}
   ],
   "total_carbon_kg": 2.0,
   "total_saved_kg": 8.0,
@@ -283,7 +284,8 @@ backend/
 │   │   ├── image_validation.py  type, size and file-signature checks
 │   │   ├── carbon.py            carbon per item
 │   │   ├── rewards.py           saved kg → points
-│   │   ├── scoring.py           carbon + rewards → totals
+│   │   ├── scoring.py           carbon + rewards + tips → totals
+│   │   ├── tips.py              one rule-based eco tip per item
 │   │   ├── offers.py            eligible and locked offers
 │   │   └── vision/              VisionProvider interface, mock, OpenAI and Gemini providers, shared prompt
 │   └── data/                in-memory data behind repository interfaces

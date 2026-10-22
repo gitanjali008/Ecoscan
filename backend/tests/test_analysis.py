@@ -13,6 +13,7 @@ from app.services.carbon import CarbonService
 from app.services.offers import OffersService
 from app.services.rewards import RewardsService
 from app.services.scoring import ScoringService
+from app.services.tips import EcoTipService
 from app.services.vision import MockVisionProvider
 
 JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 20
@@ -32,7 +33,9 @@ class FakeVision:
 
 
 def make_service(vision, max_bytes: int = 1024) -> AnalysisService:
-    scoring = ScoringService(CarbonService(InMemoryCarbonFactors()), RewardsService(points_per_kg=10))
+    factors = InMemoryCarbonFactors()
+    carbon = CarbonService(factors)
+    scoring = ScoringService(carbon, RewardsService(points_per_kg=10), EcoTipService(carbon, factors))
     return AnalysisService(vision, scoring, OffersService(InMemoryOffers()), max_bytes)
 
 

@@ -63,6 +63,7 @@ class ScoredItem(DetectedItem):
     actual_kg: float = Field(..., ge=0, description="Footprint after material and condition adjustments")
     saved_kg: float = Field(..., ge=0, description="baseline_kg - actual_kg")
     points: int = Field(..., ge=0)
+    tip: str = Field(..., examples=["Great choice! Buying it second-hand saved about 8 kg of CO2."])
 
 
 class ScoreRequest(BaseModel):

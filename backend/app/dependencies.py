@@ -17,6 +17,7 @@ from app.services.carbon import CarbonService
 from app.services.offers import OffersService
 from app.services.rewards import RewardsService
 from app.services.scoring import ScoringService
+from app.services.tips import EcoTipService
 from app.services.vision import VisionProvider, create_vision_provider
 
 
@@ -40,7 +41,8 @@ def get_scoring_service(
     settings: Settings = Depends(get_settings),
     factors: CarbonFactorRepository = Depends(get_carbon_factors),
 ) -> ScoringService:
-    return ScoringService(CarbonService(factors), RewardsService(settings.points_per_kg))
+    carbon = CarbonService(factors)
+    return ScoringService(carbon, RewardsService(settings.points_per_kg), EcoTipService(carbon, factors))
 
 
 def get_offers_service(offers: OfferRepository = Depends(get_offer_repository)) -> OffersService:
