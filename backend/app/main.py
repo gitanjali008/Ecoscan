@@ -8,10 +8,12 @@ from fastapi.responses import FileResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.routes import router
-from app.config import get_settings
+from app.config import ENV_FILE, Settings, get_settings
 from app.errors import register_error_handlers
 
-logger = logging.getLogger(__name__)
+# uvicorn shows its own "uvicorn.error" log at INFO, but not other loggers, so
+# startup messages go there to appear in the terminal next to "Uvicorn running".
+logger = logging.getLogger("uvicorn.error")
 
 # frontend/dist, made by `npm run build` in frontend/. Found from this file, not the
 # working directory, so it works however uvicorn is started.
@@ -20,6 +22,8 @@ FRONTEND_DIST = Path(__file__).resolve().parents[2] / "frontend" / "dist"
 
 def create_app(frontend_dist: Path | None = FRONTEND_DIST) -> FastAPI:
     settings = get_settings()
+
+    log_vision_provider(settings)
 
     app = FastAPI(title=settings.app_name)
 
@@ -42,6 +46,25 @@ def create_app(frontend_dist: Path | None = FRONTEND_DIST) -> FastAPI:
             frontend_dist,
         )
     return app
+
+
+def log_vision_provider(settings: Settings) -> None:
+    """Say which vision provider is active and where settings came from. Never logs a key."""
+    source = ENV_FILE if ENV_FILE.is_file() else f"defaults (no {ENV_FILE})"
+    model = {"gemini": settings.gemini_model, "openai": settings.openai_model}.get(settings.vision_provider)
+    logger.info(
+        "Vision provider: %s%s. Settings from %s.",
+        settings.vision_provider,
+        f" (model {model})" if model else ", sample results only",
+        source,
+    )
+    key = {"gemini": settings.gemini_api_key, "openai": settings.openai_api_key}.get(settings.vision_provider)
+    if model and not key:
+        logger.warning(
+            "VISION_PROVIDER=%s but %s_API_KEY is empty: scans will fail.",
+            settings.vision_provider,
+            settings.vision_provider.upper(),
+        )
 
 
 def serve_frontend(app: FastAPI, dist: Path) -> None:

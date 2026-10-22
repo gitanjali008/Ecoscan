@@ -20,7 +20,7 @@ Frontend rules:
 ## Status
 Project: complete. Not deployed; runs locally (README → Deployment).
 
-Backend: done. 292 pytest tests pass. Endpoints:
+Backend: done. 300 pytest tests pass. Endpoints:
 - GET  /                     the built frontend (frontend/dist), if it exists
 - GET  /api/health
 - POST /api/analyze          image upload -> items, carbon, points, offers

@@ -1,11 +1,18 @@
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+# backend/.env, found from this file. A plain ".env" is looked up in the folder
+# uvicorn is started from, so starting it anywhere but backend/ silently ignored
+# the file and fell back to the mock provider.
+ENV_FILE = Path(__file__).resolve().parents[1] / ".env"
+
+
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_file=ENV_FILE, extra="ignore")
 
     app_name: str = "EcoScan API"
     vision_provider: Literal["mock", "openai", "gemini"] = "mock"

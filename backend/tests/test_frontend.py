@@ -109,7 +109,7 @@ def test_post_to_a_page_is_not_given_index_html(client):
 
 @pytest.mark.parametrize("frontend_dist", ["missing", None])
 def test_without_a_built_frontend_only_the_api_is_served(tmp_path, frontend_dist, caplog):
-    caplog.set_level("INFO", logger="app.main")
+    caplog.set_level("INFO", logger="uvicorn.error")
     client = make_client(tmp_path / "dist" if frontend_dist == "missing" else None)
 
     assert client.get("/").status_code == 404

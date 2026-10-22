@@ -77,7 +77,11 @@ backend on port 8000 through the Vite dev proxy, so no extra setup is needed.
 
 ## 🚀 Backend setup
 
-All backend commands run from the `backend/` folder: that is where `.env` and `pytest.ini` are read from.
+Run backend commands from the `backend/` folder (that is where `pytest.ini` is read from).
+Settings always come from `backend/.env`, whatever folder uvicorn is started from. At startup
+the terminal shows which vision provider is active, e.g.
+`INFO: Vision provider: gemini (model gemini-3.8-flash). Settings from …/backend/.env.`
+Restart the backend after editing `.env`: settings are read once, at startup.
 
 **Windows (PowerShell)**
 ```powershell
@@ -219,7 +223,7 @@ camera app, so it works over plain HTTP. The desktop webcam view needs
 
 ## 🧪 Running the tests
 
-**Backend** (292 tests)
+**Backend** (300 tests)
 ```bash
 cd backend
 pytest
