@@ -124,7 +124,7 @@ camera app, so it works over plain HTTP. The desktop webcam view needs
 
 ## 🧪 Running the tests
 
-**Backend** (153 tests)
+**Backend** (227 tests)
 ```bash
 cd backend
 pytest
@@ -222,18 +222,21 @@ A higher-impact material (e.g. wool, factor 1.3) raises `actual_kg` but never gi
 
 ### Base footprint per new item (kg CO2e)
 
-| Category | kg | | Category | kg |
-|---|---|---|---|---|
-| t-shirt | 5 | | sweater | 12 |
-| shirt | 6 | | hoodie | 11 |
-| jeans | 10 | | jacket | 15 |
-| trousers | 9 | | shoes | 8 |
-| shorts | 4 | | socks | 1 |
-| skirt | 6 | | hat | 2 |
-| dress | 9 | | *anything else* | **7** (default) |
+| Group | Category (kg) |
+|---|---|
+| Tops | t-shirt 5 · shirt 6 · top 5 · crop top 4 · tank top 3 · sweater 12 · hoodie 11 |
+| Bottoms | jeans 10 · trousers 9 · shorts 4 · skirt 6 · leggings 4 |
+| One-piece and sets | dress 9 · tracksuit 14 · swimwear 3 · underwear 1.5 |
+| Outerwear | jacket 15 · coat 20 · blazer 14 |
+| Indian wear | saree 14 · kurta 7 · kurti 6 · lehenga 25 · salwar 6 · dupatta 4 · sherwani 20 |
+| Footwear | shoes 8 · sneakers 14 · boots 16 · sandals 5 |
+| Accessories | socks 1 · hat 2 · cap 1.5 · scarf 3 · gloves 2 · tie 1.5 · belt 3 · bag 8 |
+| *Anything else* | **7** (default) |
 
 Common synonyms are mapped to these categories, e.g. tee → t-shirt, denim → jeans,
-sneakers / boots → shoes, coat / blazer → jacket, jumper / cardigan → sweater.
+trainers → sneakers, parka → coat, sari → saree, salwar kameez → salwar,
+flip flops → sandals, jumper / cardigan → sweater. The longest matching name
+wins, so "crop top" is not read as "top" and "yoga pants" is not read as "pants".
 
 ### Material factors (× base)
 
