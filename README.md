@@ -10,10 +10,12 @@ shows offers you can unlock with those points.
 - [Tech stack](#-tech-stack)
 - [Quick start](#-quick-start)
 - [Backend setup](#-backend-setup)
+- [Image recognition (Gemini, OpenAI or mock)](#-image-recognition)
 - [Frontend setup](#-frontend-setup)
 - [Running the tests](#-running-the-tests)
 - [API reference](#-api-reference)
 - [Carbon footprint assumptions](#-carbon-footprint-assumptions)
+- [Eco tips](#-eco-tips)
 - [Code structure](#-code-structure)
 - [Frontend](#-frontend)
 - [Deployment](#-deployment)
@@ -21,7 +23,7 @@ shows offers you can unlock with those points.
 
 ## 🔧 Tech stack
 - **Backend**: Python 3.10+, FastAPI, Pydantic
-- **Image recognition**: an OpenAI vision model (default `gpt-4o-mini`), with a mock provider for development and tests
+- **Image recognition**: Google Gemini (free tier, default `gemini-3.8-flash`) or an OpenAI vision model (default `gpt-4o-mini`), with a mock provider for development and tests
 - **Frontend**: React 19 + TypeScript, Vite, Tailwind CSS v4
 - **Tests**: pytest (backend), Vitest + React Testing Library (frontend)
 
@@ -93,6 +95,74 @@ The default `.env` uses the **mock** vision provider, so the app runs without an
 | `POINTS_PER_KG` | `10` | Reward points per kg of CO2e saved |
 | `CORS_ORIGINS` | `http://localhost:5173` | Comma-separated origins allowed to call the API (the Vite dev server) |
 
+## 🔍 Image recognition
+
+The backend reads photos with one of three **vision providers**, chosen with
+`VISION_PROVIDER` in `backend/.env`:
+
+| Provider | Key needed | Cost | What you get |
+|---|---|---|---|
+| `mock` (default) | No | Free | Sample results: one of a few fixed outfits, whatever the photo shows. The app shows a **"Demo mode"** banner. |
+| `gemini` | Yes, free | Free tier (daily request limits) | Real recognition of every item in the photo |
+| `openai` | Yes | Paid per request | Real recognition of every item in the photo |
+
+### Get a free Gemini key
+
+1. Go to [Google AI Studio](https://aistudio.google.com/apikey) and sign in with a Google account.
+2. Click **Create API key** and copy it.
+3. Put it in `backend/.env` (below) and restart the backend.
+
+The free tier needs no billing account, but it has daily and per-minute request
+limits (see [Gemini rate limits](https://ai.google.dev/gemini-api/docs/rate-limits)).
+When a limit is hit, the scan fails with a friendly "try again" message (`502 vision_service_error`).
+
+### `.env` settings
+
+**Gemini (free):**
+```env
+VISION_PROVIDER=gemini
+GEMINI_API_KEY=your-key-here
+# Optional: GEMINI_MODEL=gemini-3.8-flash, GEMINI_TIMEOUT_SECONDS=30
+```
+
+**OpenAI:**
+```env
+VISION_PROVIDER=openai
+OPENAI_API_KEY=your-key-here
+# Optional: OPENAI_MODEL=gpt-4o-mini, OPENAI_TIMEOUT_SECONDS=30
+```
+
+**Mock (no key, the default):**
+```env
+VISION_PROVIDER=mock
+```
+
+`backend/.env` is in `.gitignore`, so your key is never committed. Only
+`.env.example`, with empty keys, is in the repo. If a provider is selected
+without its key, the backend still starts, but scans fail with a `500` and the
+server log shows a clear error (e.g. `GEMINI_API_KEY is required when VISION_PROVIDER=gemini`).
+
+### How a scan works
+
+1. The browser resizes the photo to a JPEG (max 1600 px) and uploads it.
+2. The backend checks the file (type, size, real image bytes).
+3. The provider sends the photo with **one shared prompt**
+   (`backend/app/services/vision/prompt.py`), used by both Gemini and OpenAI. It
+   lists every known category from the [carbon table](#base-footprint-per-new-item-kg-co2e)
+   and asks the model to:
+   - detect **every** clothing item, shoe and accessory in the photo
+   - use a known category when it fits, otherwise a short generic name
+   - guess the material, or say `"unknown"`
+   - say `"second-hand"` only for visible wear or a thrift/vintage-style photo, otherwise `"new"`
+   - give a confidence (0–1) and a short **label**, e.g. "red floral midi dress"
+   - reply with JSON only
+4. The reply is checked with Pydantic. Invalid items are skipped, and a broken
+   reply, an API error or a timeout becomes a clean `502`.
+5. Each item gets its carbon footprint, points and an [eco tip](#-eco-tips).
+
+The response's `provider` field says which provider read the photo. The app
+shows the label as each item's title, with the category underneath.
+
 ## 🎨 Frontend setup
 
 Needs **Node.js 22.12 or newer** (22 LTS or later). The app itself runs on Node
@@ -132,9 +202,11 @@ camera app, so it works over plain HTTP. The desktop webcam view needs
 cd backend
 pytest
 ```
-Tests never call the real OpenAI or Gemini APIs: both providers are tested with a fake
-client, and API tests replace the vision provider and settings through
-FastAPI's `dependency_overrides`. They also ignore your local `.env`.
+> **Tests never call real APIs and need no keys.** The Gemini and OpenAI
+> providers are tested with fake clients that return canned replies or raise
+> errors. API tests replace the vision provider and settings through FastAPI's
+> `dependency_overrides`, and ignore your local `.env`. The suite passes with
+> outgoing network access blocked, so it is free, fast and works offline.
 
 **Frontend** (48 tests)
 ```bash
@@ -268,7 +340,30 @@ The most specific match wins: "organic cotton" uses 0.7, not cotton's 1.0.
 
 "used", "thrifted", "vintage" and "pre-owned" all count as second-hand.
 
-The live values are always available at `GET /api/carbon-factors`.
+The live values are always available at `GET /api/carbon-factors`. The category
+list is also sent to the vision model, so it picks names this table knows.
+
+## 🌿 Eco tips
+
+Every scored item gets one short, friendly tip. Tips are **rule-based**, not
+AI-generated, so they are free, instant and easy to test. The rules live in one
+place, `TIP_RULES` in `backend/app/services/tips.py`, and are checked in order:
+the first rule that applies writes the tip.
+
+| # | Rule | When | Example |
+|---|---|---|---|
+| 1 | Second-hand | The item is second-hand | "Great choice! Buying it second-hand saved about 8 kg of CO2." |
+| 2 | High-impact material | New, material factor above 1 (wool, leather, nylon, acrylic) | "Wool has a higher footprint, so make it last: air it between wears and wash it cool by hand." |
+| 3 | Low-impact material | New, material factor below 1 (organic cotton, linen, hemp…) | "Nice pick! Organic cotton saved about 1.5 kg of CO2 compared with a conventional material." |
+| 4 | New conventional | Everything else (always applies) | "Next time, try it second-hand to save about 8 kg of CO2. Organic cotton would save about 3 kg." |
+
+The numbers in rule 4 are worked out by the carbon service: the same item is
+scored again as second-hand, and with a lower-impact material (cotton → organic
+cotton, polyester → recycled polyester), so they always match the tables above.
+
+**Adding a tip:** add a `TipRule(name, applies, tip)` at the right place in
+`TIP_RULES`. Care advice per material is in `CARE_TIPS`, and material swaps are
+in `MATERIAL_ALTERNATIVES`.
 
 ## 🏗️ Code structure
 
@@ -335,8 +430,9 @@ A mobile-first single page: most people will scan clothes with a phone camera.
    camera, or a webcam view on desktop). The file type and size are checked
    before uploading.
 2. **Scan**: a friendly loading message while the backend analyses the photo. The scan can be cancelled.
-3. **Results**: totals for carbon, CO2 saved and points, then one card per item
-   comparing its footprint with buying it new.
+3. **Results**: totals for carbon, CO2 saved and points, then one card per item:
+   its label (e.g. "Red floral midi dress"), its footprint compared with buying it
+   new, and an eco tip. Sample results from the mock provider show a "Demo mode" banner.
 4. **Fix mistakes**: edit an item's type, material or condition, or remove it,
    then recalculate. This calls `/api/score` and `/api/offers`.
 5. **Rewards**: offers ready to redeem, and progress bars for the rest.
