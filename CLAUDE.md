@@ -36,6 +36,6 @@ Next: Deployment and Enhancements sections in README, screenshots.
 - Small commits: one commit = one step. Never combine steps.
 - Every step: write code + tests, run `pytest` from backend/, all must pass.
 - Frontend steps: run npm run build and npm test in frontend/.
-- Before committing, show me the diff and explain what and why in simple Hinglish.
+- Before committing, show me the diff and explain what and why in simple English.
 - Do not commit or push until I say "ok commit".
 - Never commit .env or real API keys.
