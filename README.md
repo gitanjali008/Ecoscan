@@ -181,11 +181,13 @@ server log shows a clear error (e.g. `GEMINI_API_KEY is required when VISION_PRO
    - detect **every** clothing item, shoe and accessory in the photo
    - use a known category when it fits, otherwise a short generic name
    - guess the material, or say `"unknown"`
-   - say `"second-hand"` only for visible wear or a thrift/vintage-style photo, otherwise `"new"`
    - give a confidence (0–1) and a short **label**, e.g. "red floral midi dress"
    - reply with JSON only
 4. The reply is checked with Pydantic. Invalid items are skipped, and a broken
    reply, an API error or a timeout becomes a clean `502`.
+   **Every item starts as `"new"`**: a photo can't show how an item was bought,
+   so the model isn't asked to guess. The user marks second-hand items with the
+   chips on each card.
 5. Each item gets its carbon footprint, points and an [eco tip](#-eco-tips).
 
 The response's `provider` field says which provider read the photo. The app
@@ -225,7 +227,7 @@ camera app, so it works over plain HTTP. The desktop webcam view needs
 
 ## 🧪 Running the tests
 
-**Backend** (311 tests)
+**Backend** (314 tests)
 ```bash
 cd backend
 pytest
@@ -236,7 +238,7 @@ pytest
 > `dependency_overrides`, and ignore your local `.env`. The suite passes with
 > outgoing network access blocked, so it is free, fast and works offline.
 
-**Frontend** (54 tests)
+**Frontend** (55 tests)
 ```bash
 cd frontend
 npm test

@@ -26,19 +26,24 @@ def test_example_reply_is_valid_and_parses_into_an_item():
     [item] = parse_items(example)
 
     assert item.label == "red floral midi dress"
-    assert json.loads(example)["items"][0].keys() == {"category", "material", "condition", "confidence", "label"}
+    assert item.condition == "new"
+    assert json.loads(example)["items"][0].keys() == {"category", "material", "confidence", "label"}
 
 
 def test_asks_for_every_item_and_the_rules():
     assert "EVERY item of clothing, footwear and accessory" in PROMPT
     assert "one of the known categories below when it fits" in PROMPT
     assert '"unknown"' in PROMPT
-    assert 'exactly "new" or "second-hand"' in PROMPT
-    assert "thrift or vintage listing" in PROMPT
     assert "from 0 to 1" in PROMPT
     assert "label:" in PROMPT
     assert 'reply {"items": []}' in PROMPT
     assert "ONLY a JSON object" in PROMPT
+
+
+def test_does_not_ask_the_model_to_guess_the_condition():
+    # A photo can't show how an item was bought; the user says so instead.
+    assert "condition" not in PROMPT
+    assert "second-hand" not in PROMPT
 
 
 def test_without_categories_the_prompt_still_reads_well():

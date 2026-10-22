@@ -44,19 +44,34 @@ def make_service(vision, max_bytes: int = 1024) -> AnalysisService:
 
 def test_analyze_scores_items_and_finds_offers():
     vision = FakeVision([
-        DetectedItem(category="jeans", condition="second-hand"),       # saved 8 kg -> 80 points
-        DetectedItem(category="t-shirt", material="organic cotton"),   # saved 1.5 kg -> 15 points
+        DetectedItem(category="jeans", material="cotton"),             # 10 kg, nothing saved
+        DetectedItem(category="t-shirt", material="organic cotton"),   # 5 -> 3.5 kg, saved 1.5 kg -> 15 points
     ])
 
     result = make_service(vision).analyze(JPEG, "image/jpeg")
 
     assert [i.category for i in result.items] == ["jeans", "t-shirt"]
-    assert result.total_carbon_kg == 5.5
-    assert result.total_points == 95
-    assert result.offers.points == 95
-    assert all(o.points_required <= 95 for o in result.offers.eligible)
-    assert all(o.points_required > 95 for o in result.offers.locked)
+    assert result.total_carbon_kg == 13.5
+    assert result.total_points == 15
+    assert result.offers.points == 15
+    assert all(o.points_required <= 15 for o in result.offers.eligible)
+    assert all(o.points_required > 15 for o in result.offers.locked)
     assert result.provider == "fake"
+
+
+def test_every_detected_item_starts_as_new_whatever_the_provider_said():
+    # A photo can't prove an item was bought second-hand: the user chooses that.
+    vision = FakeVision([
+        DetectedItem(category="jeans", condition="second-hand"),
+        DetectedItem(category="sweater", material="wool", condition="second-hand"),
+    ])
+
+    result = make_service(vision).analyze(JPEG, "image/jpeg")
+
+    assert [i.condition for i in result.items] == ["new", "new"]
+    assert result.total_saved_kg == 0
+    assert result.total_points == 0
+    assert result.items[0].tip.startswith("Bought second-hand, this would save 8 kg CO2 (+80 pts).")
 
 
 def test_no_items_raises_no_clothing_detected():

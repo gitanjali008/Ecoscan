@@ -19,9 +19,9 @@ DEFAULT_SCENARIOS: list[list[DetectedItem]] = [
         DetectedItem(category="t-shirt", material="organic cotton", condition="new", confidence=0.88),
         DetectedItem(category="trousers", material="linen", condition="new", confidence=0.83),
     ],
-    [  # Second-hand pieces: the biggest savings.
-        DetectedItem(category="jacket", material="recycled polyester", condition="second-hand", confidence=0.86),
-        DetectedItem(category="sweater", material="wool", condition="second-hand", confidence=0.79),
+    [  # High-impact materials: big savings once the user marks them second-hand.
+        DetectedItem(category="jacket", material="recycled polyester", condition="new", confidence=0.86),
+        DetectedItem(category="sweater", material="wool", condition="new", confidence=0.79),
         DetectedItem(category="shoes", material="leather", condition="new", confidence=0.72),
     ],
 ]

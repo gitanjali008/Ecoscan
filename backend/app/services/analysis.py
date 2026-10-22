@@ -29,9 +29,13 @@ class AnalysisService:
         # The real type from the file's bytes, not the one the client claimed.
         image_type = validate_image(image, content_type, self._max_image_bytes)
 
-        items = self._vision.detect_items(image, image_type)
-        if not items:
+        detected = self._vision.detect_items(image, image_type)
+        if not detected:
             raise NoClothingDetectedError()
+
+        # A photo can't show how an item was bought, so every item starts as new,
+        # whatever the provider said. The user marks second-hand items (then /api/score).
+        items = [item.model_copy(update={"condition": "new"}) for item in detected]
 
         score = self._scoring.score(items)
         offers = self._offers.offers_for(score.total_points)

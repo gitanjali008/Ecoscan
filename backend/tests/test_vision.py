@@ -54,3 +54,8 @@ def test_mock_matches_the_provider_interface():
     provider: VisionProvider = MockVisionProvider()
 
     assert callable(provider.detect_items)
+
+
+def test_every_mock_scenario_starts_as_new():
+    # Like the real providers: the user marks second-hand items, not the scan.
+    assert {item.condition for scenario in DEFAULT_SCENARIOS for item in scenario} == {"new"}

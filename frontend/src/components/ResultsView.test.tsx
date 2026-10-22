@@ -1,4 +1,5 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
+import { useState } from 'react'
 import userEvent from '@testing-library/user-event'
 import { expect, it, vi } from 'vitest'
 
@@ -62,6 +63,38 @@ it('changing how an item was got rescores it and updates totals and offers', asy
   await waitFor(() => expect(onUpdate).toHaveBeenCalledWith({ ...rescored, offers, provider: 'gemini' }))
   expect(getOffers).toHaveBeenCalledWith(80)
   expect(screen.queryByText('Updating…')).not.toBeInTheDocument()
+})
+
+// Holds the result in state like App does, so the view re-renders with each API response.
+function StatefulResults({ initial }: { initial: AnalysisResponse }) {
+  const [result, setResult] = useState(initial)
+  return <ResultsView result={result} onUpdate={setResult} onScanAgain={() => {}} />
+}
+
+it('the chip follows the API: New after a scan, Second-hand once rescoring returns it', async () => {
+  const user = userEvent.setup()
+  let finishScoring: (score: Awaited<ReturnType<typeof client.scoreItems>>) => void = () => {}
+  vi.spyOn(client, 'scoreItems').mockReturnValue(new Promise((resolve) => (finishScoring = resolve)))
+  vi.spyOn(client, 'getOffers').mockResolvedValue({ points: 80, eligible: [], locked: [] })
+  render(<StatefulResults initial={makeResult('gemini')} />)
+  const chips = () => within(screen.getByRole('group', { name: 'How did you get it?' }))
+
+  expect(chips().getByRole('radio', { name: 'New' })).toBeChecked()
+
+  await user.click(chips().getByRole('radio', { name: 'Second-hand' }))
+  // Until the API answers, the chip still shows the last known condition.
+  expect(chips().getByRole('radio', { name: 'New' })).toBeChecked()
+
+  finishScoring({
+    items: [makeItem({ category: 'jeans', condition: 'second-hand', saved_kg: 8, points: 80 })],
+    total_carbon_kg: 2,
+    total_saved_kg: 8,
+    total_points: 80,
+  })
+
+  await waitFor(() => expect(chips().getByRole('radio', { name: 'Second-hand' })).toBeChecked())
+  expect(chips().getByRole('radio', { name: 'New' })).not.toBeChecked()
+  expect(screen.getByText('+80 pts')).toBeInTheDocument()
 })
 
 it('shows a retryable error when rescoring after a chip change fails', async () => {

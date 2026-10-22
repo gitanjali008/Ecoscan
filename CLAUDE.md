@@ -20,7 +20,7 @@ Frontend rules:
 ## Status
 Project: complete. Not deployed; runs locally (README → Deployment).
 
-Backend: done. 311 pytest tests pass. Endpoints:
+Backend: done. 314 pytest tests pass. Endpoints:
 - GET  /                     the built frontend (frontend/dist), if it exists
 - GET  /api/health
 - POST /api/analyze          image upload -> items, carbon, points, offers
@@ -29,7 +29,7 @@ Backend: done. 311 pytest tests pass. Endpoints:
 - GET  /api/carbon-factors   the carbon assumptions
 Vision: mock (default), OpenAI or Gemini, chosen with VISION_PROVIDER.
 
-Frontend: done (F1–F9). 54 Vitest tests pass. Upload or camera capture
+Frontend: done (F1–F9). 55 Vitest tests pass. Upload or camera capture
 (resized to a JPEG in the browser), results per item, edit and rescore, offers with progress, loading and error states.
 
 README: done (setup, tests, API, carbon assumptions, eco tips, structure,
