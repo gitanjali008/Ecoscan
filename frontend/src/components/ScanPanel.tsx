@@ -2,7 +2,8 @@ import { useRef, useState } from 'react'
 
 import { analyzeImage } from '../api/client'
 import type { AnalysisResponse } from '../api/types'
-import { validateImageFile } from '../lib/imageFile'
+import { checkOriginalFile, checkUploadFile } from '../lib/imageFile'
+import { resizeImage, UnsupportedImageError } from '../lib/resizeImage'
 import { ErrorNotice } from './ErrorNotice'
 import { ImagePreview } from './ImagePreview'
 import { PhotoPicker } from './PhotoPicker'
@@ -14,18 +15,34 @@ type Props = {
 
 export function ScanPanel({ onResult }: Props) {
   const [file, setFile] = useState<File | null>(null)
-  // A file rejected before upload (wrong type, too large).
+  // A file rejected before upload (wrong type, too large, can't be decoded).
   const [fileProblem, setFileProblem] = useState<string | null>(null)
+  const [preparing, setPreparing] = useState(false)
   // An error from the scan itself.
   const [scanError, setScanError] = useState<unknown>(null)
   const [scanning, setScanning] = useState(false)
   const controller = useRef<AbortController | null>(null)
 
-  function select(candidate: File) {
-    const problem = validateImageFile(candidate)
-    setFileProblem(problem)
+  async function select(candidate: File) {
     setScanError(null)
-    setFile(problem ? null : candidate)
+    setFile(null)
+    const problem = checkOriginalFile(candidate)
+    setFileProblem(problem)
+    if (problem) return
+
+    setPreparing(true)
+    try {
+      const resized = await resizeImage(candidate)
+      const uploadProblem = checkUploadFile(resized)
+      setFileProblem(uploadProblem)
+      if (!uploadProblem) setFile(resized)
+    } catch (e) {
+      setFileProblem(
+        e instanceof UnsupportedImageError ? e.message : 'This photo could not be prepared. Please try another one.',
+      )
+    } finally {
+      setPreparing(false)
+    }
   }
 
   function chooseAnother() {
@@ -46,6 +63,20 @@ export function ScanPanel({ onResult }: Props) {
     } finally {
       setScanning(false)
     }
+  }
+
+  if (preparing) {
+    return (
+      <section aria-label="Scan your clothes">
+        <div role="status" className="flex items-center gap-4 rounded-3xl border border-sand bg-white/60 p-5">
+          <span
+            aria-hidden="true"
+            className="size-8 shrink-0 animate-spin rounded-full border-4 border-fern/30 border-t-moss"
+          />
+          <p className="font-semibold">Preparing photo…</p>
+        </div>
+      </section>
+    )
   }
 
   if (!file) {

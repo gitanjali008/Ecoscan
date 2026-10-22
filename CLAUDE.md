@@ -27,8 +27,8 @@ Backend: done. 151 pytest tests pass. Endpoints:
 - GET  /api/carbon-factors   the carbon assumptions
 Vision: mock (default) or OpenAI, chosen with VISION_PROVIDER.
 
-Frontend: done (F1–F9). 29 Vitest tests pass. Upload or camera capture, results
-per item, edit and rescore, offers with progress, loading and error states.
+Frontend: done (F1–F9). 40 Vitest tests pass. Upload or camera capture
+(resized to a JPEG in the browser), results per item, edit and rescore, offers with progress, loading and error states.
 
 Next: Deployment and Enhancements sections in README, screenshots.
 

@@ -1,6 +1,5 @@
 import { useRef, useState, type ChangeEvent, type DragEvent } from 'react'
 
-import { ACCEPTED_IMAGE_TYPES } from '../lib/imageFile'
 import { CameraModal } from './CameraModal'
 import { CameraIcon, PhotoIcon } from './icons'
 
@@ -75,7 +74,7 @@ export function PhotoPicker({ onSelect }: Props) {
         </button>
       </div>
 
-      <input ref={fileInput} type="file" accept={ACCEPTED_IMAGE_TYPES.join(',')} hidden onChange={handleInput} />
+      <input ref={fileInput} type="file" accept="image/*" hidden onChange={handleInput} />
       <input ref={cameraInput} type="file" accept="image/*" capture="environment" hidden onChange={handleInput} />
 
       {cameraOpen && (

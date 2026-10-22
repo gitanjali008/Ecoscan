@@ -133,15 +133,15 @@ Tests never call the real OpenAI API: the OpenAI provider is tested with a fake
 client, and API tests replace the vision provider and settings through
 FastAPI's `dependency_overrides`. They also ignore your local `.env`.
 
-**Frontend** (29 tests)
+**Frontend** (40 tests)
 ```bash
 cd frontend
 npm test
 ```
 Tests run in jsdom with React Testing Library. `fetch` and the API client are
 mocked, so the backend does not need to be running. They cover client-side file
-validation, API error parsing, the results summary, offers (including redeeming)
-and editing items before recalculating.
+checks, resizing photos before upload, API error parsing, the results summary,
+offers (including redeeming) and editing items before recalculating.
 
 ## 📡 API reference
 
@@ -167,6 +167,12 @@ Validation errors also include a `details` list showing which field is wrong.
 **Image checks** for `/api/analyze`, in order: allowed content type → not empty →
 within the size limit → the file's first bytes really are a JPEG, PNG or WebP
 (so a `.txt` renamed to `.png` is rejected).
+
+**The web app resizes photos before upload.** It accepts any image the browser
+can decode (including HEIC on Safari), scales it so the longest side is at most
+1600 px (never up), keeps the EXIF orientation, and uploads a JPEG at quality
+0.85. A typical phone photo ends up well under 1 MB, so the API's size limit is
+only a safety net. Originals over 30 MB are refused in the browser.
 
 <details>
 <summary>Example <code>/api/analyze</code> response (lists shortened)</summary>
@@ -376,8 +382,6 @@ interfaces in `backend/app/data/`, the `VisionProvider` interface and its
   *Why:* the same photo should never pay for a second GPT call, and repeat scans become instant.
 - **Move vision calls to a background queue.** `POST /api/analyze` returns `202` with a job id, a worker (e.g. Celery, RQ or arq) runs the `AnalysisService`, and the app polls `GET /api/analyze/{job_id}`. Keep `OPENAI_TIMEOUT_SECONDS` and add retries with backoff for `429` and `5xx` only.
   *Why:* slow model calls no longer tie up web workers, and spikes queue up instead of failing.
-- **Resize images in the browser before upload.** Scale the photo down (e.g. 1600 px on the long side, JPEG quality 0.8) in `src/lib/` before `analyzeImage`.
-  *Why:* less upload data, fewer image tokens per GPT call, and large phone photos no longer hit the 5 MB limit.
 - **Postgres behind the existing repositories.** Write `PostgresCarbonFactors` and `PostgresOffers` with the same methods as `CarbonFactorRepository` and `OfferRepository`, swap them in `dependencies.py`, and add tables for users and an append-only **points ledger**. Keep images in object storage (e.g. S3) with a short retention period, or do not store them at all.
   *Why:* factors and offers can change without a deploy, and redeeming can really deduct points.
 - **Protect and observe the API.** Add rate limiting per user and IP, strictest on `/api/analyze` because every call costs money. Add structured JSON logs with a request id, metrics (scan latency, vision error rate, cost per scan), error tracking (e.g. Sentry) on both apps, and CI that runs `pytest` and `npm test` on every push.

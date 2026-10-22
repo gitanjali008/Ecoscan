@@ -1,39 +1,54 @@
 import { describe, expect, it } from 'vitest'
 
 import { makeFile } from '../test/fixtures'
-import { MAX_IMAGE_MB, validateImageFile } from './imageFile'
+import { MAX_ORIGINAL_MB, MAX_UPLOAD_MB, checkOriginalFile, checkUploadFile } from './imageFile'
 
 const MB = 1024 * 1024
 
-describe('validateImageFile', () => {
-  it.each(['image/jpeg', 'image/png', 'image/webp'])('accepts %s', (type) => {
-    expect(validateImageFile(makeFile('photo', type, 1000))).toBeNull()
+describe('checkOriginalFile', () => {
+  it.each(['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/gif', 'image/bmp'])(
+    'accepts %s',
+    (type) => {
+      expect(checkOriginalFile(makeFile('photo', type, 1000))).toBeNull()
+    },
+  )
+
+  it('lets a file with no type through, so the browser can try to decode it', () => {
+    expect(checkOriginalFile(makeFile('photo.heic', '', 1000))).toBeNull()
   })
 
   it.each([
     ['notes.pdf', 'application/pdf'],
-    ['photo.heic', 'image/heic'],
-    ['anim.gif', 'image/gif'],
-    ['mystery', ''],
+    ['clip.mp4', 'video/mp4'],
   ])('rejects %s with a friendly message', (name, type) => {
-    const message = validateImageFile(makeFile(name, type, 1000))
+    const message = checkOriginalFile(makeFile(name, type, 1000))
 
     expect(message).toContain(name)
-    expect(message).toContain('JPEG, PNG or WebP')
+    expect(message).toMatch(/isn't a photo/)
   })
 
   it('rejects an empty file', () => {
-    expect(validateImageFile(makeFile('photo.jpg', 'image/jpeg', 0))).toMatch(/empty/i)
+    expect(checkOriginalFile(makeFile('photo.jpg', 'image/jpeg', 0))).toMatch(/empty/i)
   })
 
-  it('accepts a file exactly at the size limit', () => {
-    expect(validateImageFile(makeFile('photo.jpg', 'image/jpeg', MAX_IMAGE_MB * MB))).toBeNull()
+  it('accepts a large phone photo well over the upload limit', () => {
+    expect(checkOriginalFile(makeFile('photo.jpg', 'image/jpeg', 12 * MB))).toBeNull()
   })
 
-  it('rejects a file over the limit and says how big it is', () => {
-    const message = validateImageFile(makeFile('photo.jpg', 'image/jpeg', MAX_IMAGE_MB * MB + 1))
+  it('rejects an original over the sanity cap and says how big it is', () => {
+    const message = checkOriginalFile(makeFile('photo.jpg', 'image/jpeg', MAX_ORIGINAL_MB * MB + 1))
 
-    expect(message).toContain('5.0 MB')
-    expect(message).toContain(`under ${MAX_IMAGE_MB} MB`)
+    expect(message).toContain('30.0 MB')
+    expect(message).toContain(`under ${MAX_ORIGINAL_MB} MB`)
+  })
+})
+
+describe('checkUploadFile', () => {
+  it('accepts a file exactly at the upload limit', () => {
+    expect(checkUploadFile(makeFile('photo.jpg', 'image/jpeg', MAX_UPLOAD_MB * MB))).toBeNull()
+  })
+
+  it('rejects a resized file over the upload limit', () => {
+    expect(checkUploadFile(makeFile('photo.jpg', 'image/jpeg', MAX_UPLOAD_MB * MB + 1))).toMatch(/after resizing/)
   })
 })
