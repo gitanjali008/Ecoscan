@@ -1,12 +1,20 @@
-"""The prompt shared by every real vision provider.
+"""The prompt and reply parsing shared by every real vision provider.
 
-Keeping it in one place means each provider asks the same question and gets
-answers in the same shape, which parse_items in each provider then checks.
-Giving the model the known categories makes it pick names the carbon table
-recognises, instead of falling back to the default footprint.
+Keeping them in one place means each provider asks the same question and checks
+the answer the same way. Giving the model the known categories makes it pick
+names the carbon table recognises, instead of falling back to the default footprint.
 """
 
+import logging
 from collections.abc import Iterable
+from typing import Any
+
+from pydantic import BaseModel, ValidationError
+
+from app.errors import VisionServiceError
+from app.schemas import DetectedItem
+
+logger = logging.getLogger(__name__)
 
 USER_PROMPT = "List every clothing item, footwear and accessory in this image."
 
@@ -27,3 +35,26 @@ Known categories: {categories}"""
 def build_system_prompt(categories: Iterable[str]) -> str:
     """The system prompt, listing the categories the carbon table knows."""
     return _TEMPLATE.format(categories=", ".join(categories) or "(none)")
+
+
+class _VisionReply(BaseModel):
+    """Outer shape of the model's reply. Items are checked one by one later."""
+
+    items: list[Any]
+
+
+def parse_items(content: str) -> list[DetectedItem]:
+    """Turn the model's JSON reply into items, skipping any item that is invalid."""
+    try:
+        reply = _VisionReply.model_validate_json(content)
+    except ValidationError as exc:
+        raise VisionServiceError("The image recognition service returned an unreadable answer.") from exc
+
+    items = []
+    for raw in reply.items:
+        try:
+            items.append(DetectedItem.model_validate(raw))
+        except ValidationError:
+            # One odd item should not fail the whole scan.
+            logger.warning("Skipping invalid item from vision model: %r", raw)
+    return items

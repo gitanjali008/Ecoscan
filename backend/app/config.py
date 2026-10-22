@@ -8,10 +8,13 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     app_name: str = "EcoScan API"
-    vision_provider: Literal["mock", "openai"] = "mock"
+    vision_provider: Literal["mock", "openai", "gemini"] = "mock"
     openai_api_key: str | None = None
     openai_model: str = "gpt-4o-mini"
     openai_timeout_seconds: float = 30
+    gemini_api_key: str | None = None
+    gemini_model: str = "gemini-3.8-flash"
+    gemini_timeout_seconds: float = 30
     max_image_mb: float = 10
     points_per_kg: float = 10
     cors_origins: str = "http://localhost:5173"

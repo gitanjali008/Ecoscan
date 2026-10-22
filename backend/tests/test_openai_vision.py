@@ -187,5 +187,5 @@ def test_factory_builds_mock_provider():
     assert isinstance(provider, MockVisionProvider)
 
 
-def test_both_providers_are_registered():
-    assert set(PROVIDERS) == {"mock", "openai"}
+def test_all_providers_are_registered():
+    assert set(PROVIDERS) == {"mock", "openai", "gemini"}

@@ -2,8 +2,7 @@ import json
 import re
 
 from app.data.carbon_factors import BASE_CARBON_KG, InMemoryCarbonFactors
-from app.services.vision.openai_provider import parse_items
-from app.services.vision.prompt import build_system_prompt
+from app.services.vision.prompt import build_system_prompt, parse_items
 
 PROMPT = build_system_prompt(InMemoryCarbonFactors().categories())
 

@@ -8,6 +8,7 @@ from collections.abc import Callable, Sequence
 
 from app.config import Settings
 from app.services.vision.base import VisionProvider
+from app.services.vision.gemini_provider import GeminiVisionProvider
 from app.services.vision.mock import MockVisionProvider
 from app.services.vision.openai_provider import OpenAIVisionProvider
 
@@ -21,9 +22,19 @@ def _openai(settings: Settings, categories: Sequence[str]) -> VisionProvider:
     )
 
 
+def _gemini(settings: Settings, categories: Sequence[str]) -> VisionProvider:
+    return GeminiVisionProvider(
+        model=settings.gemini_model,
+        api_key=settings.gemini_api_key,
+        timeout=settings.gemini_timeout_seconds,
+        categories=categories,
+    )
+
+
 PROVIDERS: dict[str, Callable[[Settings, Sequence[str]], VisionProvider]] = {
     "mock": lambda settings, categories: MockVisionProvider(),
     "openai": _openai,
+    "gemini": _gemini,
 }
 
 

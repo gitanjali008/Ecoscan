@@ -82,10 +82,13 @@ The default `.env` uses the **mock** vision provider, so the app runs without an
 
 | Variable | Default | What it does |
 |---|---|---|
-| `VISION_PROVIDER` | `mock` | `mock` (no key, predictable demo results) or `openai` |
+| `VISION_PROVIDER` | `mock` | `mock` (no key, predictable demo results), `openai` or `gemini` |
 | `OPENAI_API_KEY` | *(empty)* | Required when `VISION_PROVIDER=openai`. Never commit it. |
 | `OPENAI_MODEL` | `gpt-4o-mini` | Any OpenAI model that accepts images and JSON mode |
 | `OPENAI_TIMEOUT_SECONDS` | `30` | Timeout for one OpenAI request |
+| `GEMINI_API_KEY` | *(empty)* | Required when `VISION_PROVIDER=gemini`. Get a free key in [Google AI Studio](https://aistudio.google.com/apikey). Never commit it. |
+| `GEMINI_MODEL` | `gemini-3.8-flash` | Any Gemini model that accepts images and JSON output |
+| `GEMINI_TIMEOUT_SECONDS` | `30` | Timeout for one Gemini request |
 | `MAX_IMAGE_MB` | `10` | Largest upload accepted (a safety net: the web app sends resized JPEGs, usually under 1 MB) |
 | `POINTS_PER_KG` | `10` | Reward points per kg of CO2e saved |
 | `CORS_ORIGINS` | `http://localhost:5173` | Comma-separated origins allowed to call the API (the Vite dev server) |
@@ -124,12 +127,12 @@ camera app, so it works over plain HTTP. The desktop webcam view needs
 
 ## 🧪 Running the tests
 
-**Backend** (239 tests)
+**Backend** (257 tests)
 ```bash
 cd backend
 pytest
 ```
-Tests never call the real OpenAI API: the OpenAI provider is tested with a fake
+Tests never call the real OpenAI or Gemini APIs: both providers are tested with a fake
 client, and API tests replace the vision provider and settings through
 FastAPI's `dependency_overrides`. They also ignore your local `.env`.
 
@@ -282,7 +285,7 @@ backend/
 │   │   ├── rewards.py           saved kg → points
 │   │   ├── scoring.py           carbon + rewards → totals
 │   │   ├── offers.py            eligible and locked offers
-│   │   └── vision/              VisionProvider interface, mock and OpenAI providers, shared prompt
+│   │   └── vision/              VisionProvider interface, mock, OpenAI and Gemini providers, shared prompt
 │   └── data/                in-memory data behind repository interfaces
 │       ├── carbon_factors.py    the carbon tables above
 │       └── offers.py            demo offers
@@ -304,8 +307,8 @@ backend/
 - **Swap the AI model easily.** Everything depends on the `VisionProvider`
   interface (`detect_items(image, content_type) -> list[DetectedItem]`). Changing
   model means a new class plus one entry in `PROVIDERS`, chosen with `VISION_PROVIDER`.
-- **Model output is never trusted blindly.** The OpenAI reply must be JSON and is
-  checked with Pydantic. Invalid items are skipped, and a broken reply becomes a clean `502`.
+- **Model output is never trusted blindly.** Both the OpenAI and Gemini providers send
+  the same prompt (`vision/prompt.py`), and the reply must be JSON checked with Pydantic. Invalid items are skipped, and a broken reply becomes a clean `502`.
 - **Easy to test.** Services get their dependencies through `__init__`, so tests
   pass in fakes. API tests swap dependencies with `dependency_overrides`.
 - **No database**, as the brief requires: all data lives in memory.

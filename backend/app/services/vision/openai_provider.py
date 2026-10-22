@@ -5,24 +5,13 @@ bad answer becomes a VisionServiceError instead of reaching the scoring code.
 """
 
 import base64
-import logging
 from collections.abc import Sequence
-from typing import Any
 
 from openai import OpenAI, OpenAIError
-from pydantic import BaseModel, ValidationError
 
 from app.errors import VisionServiceError
 from app.schemas import DetectedItem
-from app.services.vision.prompt import USER_PROMPT, build_system_prompt
-
-logger = logging.getLogger(__name__)
-
-
-class _VisionReply(BaseModel):
-    """Outer shape of the model's reply. Items are checked one by one later."""
-
-    items: list[Any]
+from app.services.vision.prompt import USER_PROMPT, build_system_prompt, parse_items
 
 
 class OpenAIVisionProvider:
@@ -70,20 +59,3 @@ class OpenAIVisionProvider:
             raise VisionServiceError("The image recognition service returned an empty answer.")
 
         return parse_items(content)
-
-
-def parse_items(content: str) -> list[DetectedItem]:
-    """Turn the model's JSON reply into items, skipping any item that is invalid."""
-    try:
-        reply = _VisionReply.model_validate_json(content)
-    except ValidationError as exc:
-        raise VisionServiceError("The image recognition service returned an unreadable answer.") from exc
-
-    items = []
-    for raw in reply.items:
-        try:
-            items.append(DetectedItem.model_validate(raw))
-        except ValidationError:
-            # One odd item should not fail the whole scan.
-            logger.warning("Skipping invalid item from vision model: %r", raw)
-    return items
