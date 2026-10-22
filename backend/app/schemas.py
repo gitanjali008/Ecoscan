@@ -14,6 +14,9 @@ Condition = Literal["new", "second-hand"]
 _SECOND_HAND_ALIASES = {"second-hand", "second hand", "secondhand", "used", "pre-owned", "preowned", "thrifted", "vintage"}
 
 
+LABEL_MAX_LENGTH = 80
+
+
 class DetectedItem(BaseModel):
     """One clothing item as recognised in the image (or sent by the client)."""
 
@@ -21,6 +24,7 @@ class DetectedItem(BaseModel):
     material: str = Field("unknown", examples=["organic cotton"])
     condition: Condition = "new"
     confidence: float = Field(1.0, ge=0, le=1)
+    label: str | None = Field(None, examples=["red floral midi dress"], description="Short human description")
 
     @field_validator("category")
     @classmethod
@@ -34,6 +38,14 @@ class DetectedItem(BaseModel):
     @classmethod
     def _clean_material(cls, value: str) -> str:
         return value.strip().lower() or "unknown"
+
+    @field_validator("label")
+    @classmethod
+    def _clean_label(cls, value: str | None) -> str | None:
+        # Optional and only for display: a blank one is dropped, a long one cut short.
+        if value is None:
+            return None
+        return value.strip()[:LABEL_MAX_LENGTH] or None
 
     @field_validator("condition", mode="before")
     @classmethod

@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from app.schemas import DetectedItem, ScoreRequest
+from app.schemas import LABEL_MAX_LENGTH, DetectedItem, ScoreRequest
 
 
 def test_item_is_normalised():
@@ -17,6 +17,21 @@ def test_defaults_are_applied():
     assert item.material == "unknown"
     assert item.condition == "new"
     assert item.confidence == 1.0
+    assert item.label is None
+
+
+def test_label_is_trimmed_and_keeps_its_case():
+    assert DetectedItem(category="dress", label="  Red floral midi dress ").label == "Red floral midi dress"
+
+
+def test_blank_label_becomes_none():
+    assert DetectedItem(category="dress", label="   ").label is None
+
+
+def test_long_label_is_cut_short_instead_of_rejected():
+    item = DetectedItem(category="dress", label="x" * 500)
+
+    assert item.label == "x" * LABEL_MAX_LENGTH
 
 
 @pytest.mark.parametrize("word", ["used", "Thrifted", "second hand", "pre-owned"])

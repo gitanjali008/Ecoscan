@@ -178,6 +178,7 @@ def _best_match(text: str, keys: list[str]) -> str | None:
 class CarbonFactorRepository(Protocol):
     """What the carbon service needs. Any data source can implement this."""
 
+    def categories(self) -> list[str]: ...
     def canonical_category(self, category: str) -> str | None: ...
     def base_kg(self, category: str) -> float: ...
     def material_factor(self, material: str) -> float: ...
@@ -199,6 +200,10 @@ class InMemoryCarbonFactors:
         self._aliases = aliases
         self._materials = materials
         self._conditions = conditions
+
+    def categories(self) -> list[str]:
+        """The known category names (not the aliases), e.g. for a vision prompt."""
+        return list(self._base)
 
     def canonical_category(self, category: str) -> str | None:
         """Map any wording ("Blue denim", "tee") to a table key, or None if unknown."""

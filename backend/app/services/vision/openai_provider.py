@@ -6,6 +6,7 @@ bad answer becomes a VisionServiceError instead of reaching the scoring code.
 
 import base64
 import logging
+from collections.abc import Sequence
 from typing import Any
 
 from openai import OpenAI, OpenAIError
@@ -13,21 +14,9 @@ from pydantic import BaseModel, ValidationError
 
 from app.errors import VisionServiceError
 from app.schemas import DetectedItem
+from app.services.vision.prompt import USER_PROMPT, build_system_prompt
 
 logger = logging.getLogger(__name__)
-
-SYSTEM_PROMPT = """You identify clothing in photos for a carbon footprint app.
-Reply with ONLY a JSON object, no other text, in exactly this shape:
-{"items": [{"category": "t-shirt", "material": "organic cotton", "condition": "new", "confidence": 0.9}]}
-Rules:
-- One entry per visible item of clothing, footwear or accessory (e.g. hat, bag, belt, scarf). Ignore everything else.
-- category: a short common name in lowercase, e.g. "t-shirt", "jeans", "sneakers".
-- material: your best guess of the main fabric in lowercase, or "unknown".
-- condition: exactly "new" or "second-hand". Use "second-hand" only if the item clearly looks worn or vintage.
-- confidence: a number from 0 to 1.
-- If there is no clothing in the image, reply {"items": []}."""
-
-USER_PROMPT = "List the clothing items in this image."
 
 
 class _VisionReply(BaseModel):
@@ -45,6 +34,7 @@ class OpenAIVisionProvider:
         api_key: str | None = None,
         client: OpenAI | None = None,
         timeout: float = 30,
+        categories: Sequence[str] = (),
     ) -> None:
         if client is None:
             if not api_key:
@@ -52,6 +42,7 @@ class OpenAIVisionProvider:
             client = OpenAI(api_key=api_key, timeout=timeout)
         self._client = client
         self._model = model
+        self._system_prompt = build_system_prompt(categories)
 
     def detect_items(self, image: bytes, content_type: str) -> list[DetectedItem]:
         data_url = f"data:{content_type};base64,{base64.b64encode(image).decode('ascii')}"
@@ -61,7 +52,7 @@ class OpenAIVisionProvider:
                 model=self._model,
                 response_format={"type": "json_object"},
                 messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "system", "content": self._system_prompt},
                     {
                         "role": "user",
                         "content": [

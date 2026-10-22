@@ -16,6 +16,9 @@ from app.services.vision import (
     OpenAIVisionProvider,
     create_vision_provider,
 )
+from app.services.vision.prompt import USER_PROMPT, build_system_prompt
+
+CATEGORIES = ["t-shirt", "jeans"]
 
 
 class FakeClient:
@@ -35,9 +38,9 @@ class FakeClient:
         return SimpleNamespace(choices=[SimpleNamespace(message=message)])
 
 
-def provider_replying(content: str | None) -> tuple[OpenAIVisionProvider, FakeClient]:
+def provider_replying(content: str | None, categories=()) -> tuple[OpenAIVisionProvider, FakeClient]:
     client = FakeClient(content=content)
-    return OpenAIVisionProvider(model="test-model", client=client), client
+    return OpenAIVisionProvider(model="test-model", client=client, categories=categories), client
 
 
 def test_valid_json_is_parsed_into_items():
@@ -55,12 +58,21 @@ def test_valid_json_is_parsed_into_items():
     ]
 
 
+def test_label_is_kept():
+    reply = {"items": [{"category": "dress", "label": " red floral midi dress "}]}
+    provider, _ = provider_replying(json.dumps(reply))
+
+    [item] = provider.detect_items(b"img", "image/jpeg")
+
+    assert item.label == "red floral midi dress"
+
+
 def test_missing_fields_get_defaults():
     provider, _ = provider_replying('{"items": [{"category": "hat"}]}')
 
     [item] = provider.detect_items(b"img", "image/png")
 
-    assert (item.material, item.condition, item.confidence) == ("unknown", "new", 1.0)
+    assert (item.material, item.condition, item.confidence, item.label) == ("unknown", "new", 1.0, None)
 
 
 def test_no_clothing_gives_an_empty_list():
@@ -135,9 +147,19 @@ def test_request_sends_model_json_mode_and_base64_image():
     [call] = client.calls
     assert call["model"] == "test-model"
     assert call["response_format"] == {"type": "json_object"}
+    assert call["messages"][1]["content"][0]["text"] == USER_PROMPT
     image_part = call["messages"][1]["content"][1]
     expected = "data:image/png;base64," + base64.b64encode(b"\x89PNG bytes").decode()
     assert image_part["image_url"]["url"] == expected
+
+
+def test_request_uses_the_shared_prompt_with_the_known_categories():
+    provider, client = provider_replying('{"items": []}', categories=["saree", "jeans"])
+
+    provider.detect_items(b"img", "image/jpeg")
+
+    [call] = client.calls
+    assert call["messages"][0] == {"role": "system", "content": build_system_prompt(["saree", "jeans"])}
 
 
 def settings(**overrides) -> Settings:
@@ -148,18 +170,19 @@ def settings(**overrides) -> Settings:
 @pytest.mark.parametrize("key", [None, ""])
 def test_openai_without_api_key_raises_a_clear_error(key):
     with pytest.raises(ValueError, match="OPENAI_API_KEY"):
-        create_vision_provider(settings(vision_provider="openai", openai_api_key=key))
+        create_vision_provider(settings(vision_provider="openai", openai_api_key=key), CATEGORIES)
 
 
 def test_factory_builds_openai_provider_with_a_key():
     # Creating the SDK client makes no network call.
-    provider = create_vision_provider(settings(vision_provider="openai", openai_api_key="sk-test"))
+    provider = create_vision_provider(settings(vision_provider="openai", openai_api_key="sk-test"), CATEGORIES)
 
     assert isinstance(provider, OpenAIVisionProvider)
+    assert "Known categories: t-shirt, jeans" in provider._system_prompt
 
 
 def test_factory_builds_mock_provider():
-    provider = create_vision_provider(settings(vision_provider="mock", openai_api_key=None))
+    provider = create_vision_provider(settings(vision_provider="mock", openai_api_key=None), CATEGORIES)
 
     assert isinstance(provider, MockVisionProvider)
 

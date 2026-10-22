@@ -33,7 +33,7 @@ def get_offer_repository() -> OfferRepository:
 @lru_cache
 def get_vision_provider() -> VisionProvider:
     # Cached so the OpenAI client (and its connection pool) is reused.
-    return create_vision_provider(get_settings())
+    return create_vision_provider(get_settings(), get_carbon_factors().categories())
 
 
 def get_scoring_service(

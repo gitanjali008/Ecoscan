@@ -14,6 +14,7 @@ from app.config import Settings, get_settings
 from app.dependencies import get_vision_provider
 from app.errors import VisionServiceError
 from app.main import create_app
+from app.schemas import DetectedItem
 from app.services.vision import MockVisionProvider
 
 
@@ -119,6 +120,19 @@ def test_analyze_without_a_file(client):
     assert_error(client.post("/api/analyze"), 422, "validation_error")
 
 
+class LabelledVision:
+    def detect_items(self, image, content_type):
+        return [DetectedItem(category="kurti", material="cotton", label="yellow block-print kurti")]
+
+
+def test_analyze_returns_the_item_label(make_client):
+    response = upload(make_client(vision=LabelledVision()), PNG)
+
+    assert response.status_code == 200
+    [item] = response.json()["items"]
+    assert (item["category"], item["label"]) == ("kurti", "yellow block-print kurti")
+
+
 # /score
 
 def test_score_valid_items(client):
@@ -136,6 +150,15 @@ def test_score_valid_items(client):
 
 def test_score_with_no_items(client):
     assert_error(client.post("/api/score", json={"items": []}), 422, "validation_error")
+
+
+def test_score_keeps_the_label_and_it_is_optional(client):
+    items = [{"category": "saree", "label": "silk saree"}, {"category": "jeans"}]
+
+    response = client.post("/api/score", json={"items": items})
+
+    assert response.status_code == 200
+    assert [i["label"] for i in response.json()["items"]] == ["silk saree", None]
 
 
 # /offers
