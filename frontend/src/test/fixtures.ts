@@ -15,7 +15,7 @@ export function makeItem(overrides: Partial<ScoredItem> = {}): ScoredItem {
     actual_kg: 5,
     saved_kg: 0,
     points: 0,
-    tip: 'Next time, try it second-hand to save about 4 kg of CO2.',
+    tip: 'Bought second-hand, this would save 4 kg CO2 (+40 pts). Organic cotton would save about 1.5 kg.',
     ...overrides,
   }
 }

@@ -42,7 +42,8 @@ def get_scoring_service(
     factors: CarbonFactorRepository = Depends(get_carbon_factors),
 ) -> ScoringService:
     carbon = CarbonService(factors)
-    return ScoringService(carbon, RewardsService(settings.points_per_kg), EcoTipService(carbon, factors))
+    rewards = RewardsService(settings.points_per_kg)
+    return ScoringService(carbon, rewards, EcoTipService(carbon, factors, rewards))
 
 
 def get_offers_service(offers: OfferRepository = Depends(get_offer_repository)) -> OffersService:

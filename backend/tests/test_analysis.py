@@ -37,7 +37,8 @@ class FakeVision:
 def make_service(vision, max_bytes: int = 1024) -> AnalysisService:
     factors = InMemoryCarbonFactors()
     carbon = CarbonService(factors)
-    scoring = ScoringService(carbon, RewardsService(points_per_kg=10), EcoTipService(carbon, factors))
+    rewards = RewardsService(points_per_kg=10)
+    scoring = ScoringService(carbon, rewards, EcoTipService(carbon, factors, rewards))
     return AnalysisService(vision, scoring, OffersService(InMemoryOffers()), max_bytes)
 
 

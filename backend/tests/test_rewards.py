@@ -35,7 +35,7 @@ def test_points_per_kg_must_be_positive():
 
 factors = InMemoryCarbonFactors()
 carbon = CarbonService(factors)
-scoring = ScoringService(carbon, rewards, EcoTipService(carbon, factors))
+scoring = ScoringService(carbon, rewards, EcoTipService(carbon, factors, rewards))
 
 
 def test_scoring_combines_carbon_and_points():

@@ -1,9 +1,11 @@
 import { useState } from 'react'
 
-import type { AnalysisResponse } from '../api/types'
+import { rescore, toItemInput } from '../api/rescore'
+import type { AnalysisResponse, Condition } from '../api/types'
 import { formatKg } from '../lib/format'
 import { POINTS_PER_KG } from '../lib/rewards'
 import { EditItemsPanel } from './EditItemsPanel'
+import { ErrorNotice } from './ErrorNotice'
 import { ItemCard } from './ItemCard'
 import { OffersSection } from './OffersSection'
 import { ResultsSummary } from './ResultsSummary'
@@ -19,8 +21,26 @@ export function ResultsView({ result, onUpdate, onScanAgain }: Props) {
   const [editing, setEditing] = useState(false)
   // True once the user has checked and recalculated the items.
   const [reviewed, setReviewed] = useState(false)
+  // The item being scored again after its condition changed, and what to retry if that failed.
+  const [updatingIndex, setUpdatingIndex] = useState<number | null>(null)
+  const [conditionError, setConditionError] = useState<{ error: unknown; retry: () => void } | null>(null)
   const count = result.items.length
   const itemsLabel = `${count} ${count === 1 ? 'item' : 'items'}`
+
+  async function changeCondition(index: number, condition: Condition) {
+    setUpdatingIndex(index)
+    setConditionError(null)
+    try {
+      const items = result.items.map((item, i) => toItemInput(i === index ? { ...item, condition } : item))
+      const updated = await rescore(items)
+      // Rescoring doesn't re-read the photo, so it was still read by the same provider.
+      onUpdate({ ...updated, provider: result.provider })
+    } catch (error) {
+      setConditionError({ error, retry: () => changeCondition(index, condition) })
+    } finally {
+      setUpdatingIndex(null)
+    }
+  }
 
   return (
     <section aria-labelledby="results-title" className="space-y-6 pt-4">
@@ -57,7 +77,8 @@ export function ResultsView({ result, onUpdate, onScanAgain }: Props) {
             <button
               type="button"
               onClick={() => setEditing(true)}
-              className="min-h-10 rounded-full border border-moss px-4 text-sm font-semibold text-moss hover:bg-moss/10"
+              disabled={updatingIndex !== null}
+              className="min-h-10 rounded-full border border-moss px-4 text-sm font-semibold text-moss hover:bg-moss/10 disabled:opacity-50"
             >
               Edit items
             </button>
@@ -77,12 +98,22 @@ export function ResultsView({ result, onUpdate, onScanAgain }: Props) {
               }}
             />
           ) : (
-            <ul className="space-y-3">
-              {result.items.map((item, index) => (
-                // Items have no id and the same category can appear twice.
-                <ItemCard key={`${index}-${item.category}`} item={item} showConfidence={!reviewed} />
-              ))}
-            </ul>
+            <div className="space-y-3">
+              <ul className="space-y-3">
+                {result.items.map((item, index) => (
+                  // Items have no id and the same category can appear twice.
+                  <ItemCard
+                    key={`${index}-${item.category}`}
+                    item={item}
+                    showConfidence={!reviewed}
+                    onConditionChange={(condition) => changeCondition(index, condition)}
+                    updating={updatingIndex === index}
+                    disabled={updatingIndex !== null}
+                  />
+                ))}
+              </ul>
+              {conditionError && <ErrorNotice error={conditionError.error} onRetry={conditionError.retry} />}
+            </div>
           )}
         </div>
       </div>

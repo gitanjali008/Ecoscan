@@ -1,6 +1,7 @@
 import { useEffect, useId, useState } from 'react'
 
-import { getCarbonFactors, getOffers, scoreItems } from '../api/client'
+import { getCarbonFactors } from '../api/client'
+import { rescore, toItemInput } from '../api/rescore'
 import type { AnalysisResponse, ScoredItem } from '../api/types'
 import { ErrorNotice } from './ErrorNotice'
 import { ItemEditor, type DraftItem } from './ItemEditor'
@@ -68,17 +69,7 @@ export function EditItemsPanel({ items, onSaved, onCancel }: Props) {
     setError(null)
     setSaving(true)
     try {
-      const score = await scoreItems(
-        drafts.map(({ category, material, condition, confidence, label }) => ({
-          category,
-          material,
-          condition,
-          confidence,
-          label,
-        })),
-      )
-      const offers = await getOffers(score.total_points)
-      onSaved({ ...score, offers })
+      onSaved(await rescore(drafts.map((draft) => toItemInput(draft))))
     } catch (e) {
       setError(e)
     } finally {

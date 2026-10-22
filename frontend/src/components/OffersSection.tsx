@@ -18,6 +18,29 @@ export function OffersSection({ offers }: { offers: OffersResponse }) {
 
   const { eligible, locked, points } = offers
 
+  // Nothing earned yet: encourage, and show only the nearest goal (locked offers come cheapest first).
+  if (points === 0 && eligible.length === 0) {
+    const nearest = locked[0]
+    return (
+      <section aria-labelledby="offers-title" className="space-y-4">
+        <h2 id="offers-title" className="font-display text-2xl font-semibold">
+          Your rewards
+        </h2>
+        <p className="rounded-2xl bg-sand/50 p-4 text-stone">
+          No points yet — mark items you got second-hand, or choose lower-impact materials next time.
+        </p>
+        {nearest && (
+          <div>
+            <h3 className="font-semibold">Your nearest reward</h3>
+            <ul className="mt-3">
+              <LockedOfferCard offer={nearest} points={0} />
+            </ul>
+          </div>
+        )}
+      </section>
+    )
+  }
+
   return (
     <section aria-labelledby="offers-title" className="space-y-6">
       <h2 id="offers-title" className="font-display text-2xl font-semibold">

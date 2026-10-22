@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from app.data.carbon_factors import CarbonFactorRepository
 from app.schemas import DetectedItem
 from app.services.carbon import CarbonBreakdown, CarbonService
+from app.services.rewards import RewardsService
 
 # A lower-impact choice of the same kind of material. Checked in order, so a
 # "cotton/polyester blend" gets the polyester tip.
@@ -35,6 +36,7 @@ class TipContext:
     saved_kg: float
     material_factor: float
     carbon: CarbonService
+    rewards: RewardsService
 
     def saved_if(self, **changes: str) -> float:
         """kg saved if the same item had, e.g., condition="second-hand"."""
@@ -59,8 +61,15 @@ def _care_tip(material: str) -> str:
     return next((tip for word, tip in CARE_TIPS.items() if word in material), DEFAULT_CARE_TIP)
 
 
-def _new_conventional_tip(ctx: TipContext) -> str:
-    tip = f"Next time, try it second-hand to save about {_kg(ctx.saved_if(condition='second-hand'))} of CO2."
+def _would_save_second_hand_tip(ctx: TipContext) -> str:
+    # A photo can't show that an item was second-hand, so lead with what marking it would save.
+    saved = ctx.saved_if(condition="second-hand")
+    tip = f"Bought second-hand, this would save {_kg(saved)} CO2 (+{ctx.rewards.points_for(saved)} pts)."
+    if ctx.material_factor > 1:
+        return tip + (
+            f" {ctx.item.material.capitalize()} has a higher footprint, so make it last: "
+            f"{_care_tip(ctx.item.material)}."
+        )
     alternative = next((alt for word, alt in MATERIAL_ALTERNATIVES if word in ctx.item.material), None)
     if alternative:
         tip += f" {alternative.capitalize()} would save about {_kg(ctx.saved_if(material=alternative))}."
@@ -74,14 +83,6 @@ TIP_RULES: list[TipRule] = [
         tip=lambda ctx: f"Great choice! Buying it second-hand saved about {_kg(ctx.saved_kg)} of CO2.",
     ),
     TipRule(
-        name="high-impact material",
-        applies=lambda ctx: ctx.material_factor > 1,
-        tip=lambda ctx: (
-            f"{ctx.item.material.capitalize()} has a higher footprint, so make it last: "
-            f"{_care_tip(ctx.item.material)}."
-        ),
-    ),
-    TipRule(
         name="low-impact material",
         applies=lambda ctx: ctx.material_factor < 1,
         tip=lambda ctx: (
@@ -89,8 +90,9 @@ TIP_RULES: list[TipRule] = [
             "compared with a conventional material."
         ),
     ),
-    # Last, and always applies: new, in a conventional or unknown material.
-    TipRule(name="new conventional", applies=lambda ctx: True, tip=_new_conventional_tip),
+    # Last, and always applies: new, with nothing saved. Adds care advice for a
+    # high-impact material, or a lower-impact alternative for a conventional one.
+    TipRule(name="would save second-hand", applies=lambda ctx: True, tip=_would_save_second_hand_tip),
 ]
 
 
@@ -99,10 +101,12 @@ class EcoTipService:
         self,
         carbon: CarbonService,
         factors: CarbonFactorRepository,
+        rewards: RewardsService,
         rules: list[TipRule] = TIP_RULES,
     ) -> None:
         self._carbon = carbon
         self._factors = factors
+        self._rewards = rewards
         self._rules = rules
 
     def tip_for(self, result: CarbonBreakdown) -> str:
@@ -111,6 +115,7 @@ class EcoTipService:
             saved_kg=result.saved_kg,
             material_factor=self._factors.material_factor(result.item.material),
             carbon=self._carbon,
+            rewards=self._rewards,
         )
         rule = next(rule for rule in self._rules if rule.applies(ctx))
         return rule.tip(ctx)

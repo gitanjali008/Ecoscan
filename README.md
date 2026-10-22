@@ -225,7 +225,7 @@ camera app, so it works over plain HTTP. The desktop webcam view needs
 
 ## 🧪 Running the tests
 
-**Backend** (310 tests)
+**Backend** (311 tests)
 ```bash
 cd backend
 pytest
@@ -236,7 +236,7 @@ pytest
 > `dependency_overrides`, and ignore your local `.env`. The suite passes with
 > outgoing network access blocked, so it is free, fast and works offline.
 
-**Frontend** (48 tests)
+**Frontend** (54 tests)
 ```bash
 cd frontend
 npm test
@@ -244,8 +244,9 @@ npm test
 Tests run in jsdom with React Testing Library. `fetch` and the API client are
 mocked, so the backend does not need to be running. They cover client-side file
 checks, resizing photos before upload, API error parsing, the results summary,
-item cards (label and eco tip), the demo-mode banner, offers (including
-redeeming) and editing items before recalculating.
+item cards (label, eco tip, the New / Second-hand chips and rescoring), the
+demo-mode banner, offers (including redeeming and the zero-points message) and
+editing items before recalculating.
 
 ## 📡 API reference
 
@@ -381,13 +382,15 @@ the first rule that applies writes the tip.
 | # | Rule | When | Example |
 |---|---|---|---|
 | 1 | Second-hand | The item is second-hand | "Great choice! Buying it second-hand saved about 8 kg of CO2." |
-| 2 | High-impact material | New, material factor above 1 (wool, leather, nylon, acrylic) | "Wool has a higher footprint, so make it last: air it between wears and wash it cool by hand." |
-| 3 | Low-impact material | New, material factor below 1 (organic cotton, linen, hemp…) | "Nice pick! Organic cotton saved about 1.5 kg of CO2 compared with a conventional material." |
-| 4 | New conventional | Everything else (always applies) | "Next time, try it second-hand to save about 8 kg of CO2. Organic cotton would save about 3 kg." |
+| 2 | Low-impact material | New, material factor below 1 (organic cotton, linen, hemp…) | "Nice pick! Organic cotton saved about 1.5 kg of CO2 compared with a conventional material." |
+| 3 | Would save second-hand | Everything else: new, nothing saved (always applies) | "Bought second-hand, this would save 8 kg CO2 (+80 pts). Organic cotton would save about 3 kg." |
 
-The numbers in rule 4 are worked out by the carbon service: the same item is
-scored again as second-hand, and with a lower-impact material (cotton → organic
-cotton, polyester → recycled polyester), so they always match the tables above.
+Rule 3 leads with what second-hand would save, because a photo can't show how an
+item was bought and users can mark it on the item card. It then adds care advice
+for a high-impact material ("Wool has a higher footprint, so make it last: …"), or
+a lower-impact alternative (cotton → organic cotton, polyester → recycled polyester).
+Its kg and points are worked out by the carbon and rewards services: the same item
+is scored again as second-hand, so they always match the tables above.
 
 **Adding a tip:** add a `TipRule(name, applies, tip)` at the right place in
 `TIP_RULES`. Care advice per material is in `CARE_TIPS`, and material swaps are
@@ -460,9 +463,14 @@ A mobile-first single page: most people will scan clothes with a phone camera.
 3. **Results**: totals for carbon, CO2 saved and points, then one card per item:
    its label (e.g. "Red floral midi dress"), its footprint compared with buying it
    new, and an eco tip. Sample results from the mock provider show a "Demo mode" banner.
-4. **Fix mistakes**: edit an item's type, material or condition, or remove it,
-   then recalculate. This calls `/api/score` and `/api/offers`.
-5. **Rewards**: offers ready to redeem, and progress bars for the rest.
+4. **"How did you get it?"**: a photo can't show whether an item was bought
+   second-hand, so each card has **New / Second-hand** chips, pre-selected from the
+   scan. Changing one rescores right away (`/api/score` and `/api/offers`) and
+   updates the item, the totals and the offers.
+5. **Fix mistakes**: "Edit items" changes an item's type, material or condition,
+   or removes it, then recalculates.
+6. **Rewards**: offers ready to redeem, and progress bars for the rest. With no
+   points yet, a friendly nudge and the nearest reward instead of an empty list.
 
 Every backend error code has its own message, with "Try again" only where a retry can help.
 
@@ -473,7 +481,8 @@ frontend/src/
 ├── api/                 the only code that talks to the backend
 │   ├── config.ts            API_BASE from VITE_API_URL (default "/api")
 │   ├── types.ts             TypeScript versions of the backend schemas
-│   └── client.ts            analyzeImage, scoreItems, getOffers, getCarbonFactors + ApiError
+│   ├── client.ts            analyzeImage, scoreItems, getOffers, getCarbonFactors + ApiError
+│   └── rescore.ts           score edited items again + fetch offers (chips and Edit items)
 ├── components/          small components, one job each
 │   ├── ScanPanel.tsx        photo → preview → scan, with loading and errors
 │   ├── PhotoPicker.tsx      drag and drop, choose photo, take photo

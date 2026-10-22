@@ -23,7 +23,8 @@ function App() {
 
       <main className="flex-1 space-y-10">
         {result ? (
-          <ResultsView result={result} onUpdate={show} onScanAgain={() => show(null)} />
+          // Updates stay on the same screen, so they keep the scroll position.
+          <ResultsView result={result} onUpdate={setResult} onScanAgain={() => show(null)} />
         ) : (
           <>
             <section className="pt-6 sm:pt-12">
