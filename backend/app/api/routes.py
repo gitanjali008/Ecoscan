@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends, File, Query, UploadFile
-from fastapi.responses import RedirectResponse
 
 from app.config import Settings, get_settings
 from app.data.carbon_factors import CarbonFactorRepository
@@ -10,15 +9,6 @@ from app.services.offers import OffersService
 from app.services.scoring import ScoringService
 
 router = APIRouter()
-
-# Mounted without the /api prefix.
-root_router = APIRouter()
-
-
-@root_router.get("/", include_in_schema=False)
-def root() -> RedirectResponse:
-    """Opening the bare server URL shows the API docs instead of a 404."""
-    return RedirectResponse(url="/docs")
 
 
 @router.get("/health")

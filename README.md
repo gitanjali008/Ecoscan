@@ -29,7 +29,30 @@ shows offers you can unlock with those points.
 
 ## ⚡ Quick start
 
-You need **Python 3.10+** and **Node.js 22.12+**. Run the backend and the frontend
+You need **Python 3.10+** and **Node.js 22.12+**. Both ways below run on the mock
+vision provider by default, without an API key.
+
+### Quick run (one server)
+
+Build the frontend once, then FastAPI serves the whole app (the page and the API) from one port:
+
+```bash
+cd frontend && npm install && npm run build
+cd ../backend
+# first time only: create and activate a venv, then (see Backend setup)
+#   pip install -r requirements.txt
+#   copy .env.example .env    (macOS / Linux: cp .env.example .env)
+uvicorn app.main:app
+```
+
+Then open **http://localhost:8000**. The app calls `/api` on the same server, so
+there is nothing to configure and no CORS. If `frontend/dist` does not exist, the
+backend serves only the API and logs a hint to run `npm run build`. Rebuild after
+changing frontend code.
+
+### Development (two terminals)
+
+For hot reload while you change code, run the backend and the Vite dev server
 in two terminals, from the repo root:
 
 | Terminal 1: backend | Terminal 2: frontend |
@@ -42,15 +65,14 @@ in two terminals, from the repo root:
 
 Then open **http://localhost:5173**. The frontend sends `/api` requests to the
 backend on port 8000 through the Vite dev proxy, so no extra setup is needed.
-Both run on the mock vision provider by default, without an API key.
 
 ### Local URLs
 
 | URL | What |
 |---|---|
-| http://localhost:5173 | The EcoScan app |
+| http://localhost:8000 | The EcoScan app in one-server mode (after `npm run build`) |
+| http://localhost:5173 | The EcoScan app in development mode (Vite dev server) |
 | http://localhost:8000/docs | Interactive API docs (Swagger): try every endpoint in the browser |
-| http://localhost:8000 | Redirects to `/docs` |
 | http://localhost:8000/api/health | Health check, returns `{"status": "ok"}` |
 
 ## 🚀 Backend setup
@@ -197,7 +219,7 @@ camera app, so it works over plain HTTP. The desktop webcam view needs
 
 ## 🧪 Running the tests
 
-**Backend** (276 tests)
+**Backend** (292 tests)
 ```bash
 cd backend
 pytest
@@ -370,7 +392,7 @@ in `MATERIAL_ALTERNATIVES`.
 ```
 backend/
 ├── app/
-│   ├── main.py              create_app(): CORS, error handlers, routes
+│   ├── main.py              create_app(): CORS, error handlers, routes, serves frontend/dist if built
 │   ├── config.py            all settings, read from .env
 │   ├── schemas.py           all Pydantic models (request and response shapes)
 │   ├── errors.py            custom errors → {"error": {"code", "message"}}
