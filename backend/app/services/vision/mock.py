@@ -30,6 +30,8 @@ DEFAULT_SCENARIOS: list[list[DetectedItem]] = [
 class MockVisionProvider:
     """VisionProvider that returns a scenario chosen by the image's content."""
 
+    name = "mock"
+
     def __init__(self, scenarios: list[list[DetectedItem]] = DEFAULT_SCENARIOS) -> None:
         if not scenarios:
             raise ValueError("MockVisionProvider needs at least one scenario")

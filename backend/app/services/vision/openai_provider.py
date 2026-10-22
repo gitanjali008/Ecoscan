@@ -17,6 +17,8 @@ from app.services.vision.prompt import USER_PROMPT, build_system_prompt, parse_i
 class OpenAIVisionProvider:
     """VisionProvider that asks an OpenAI vision model to list clothing items."""
 
+    name = "openai"
+
     def __init__(
         self,
         model: str,

@@ -7,7 +7,7 @@ import { ItemEditor, type DraftItem } from './ItemEditor'
 
 type Props = {
   items: ScoredItem[]
-  onSaved: (result: AnalysisResponse) => void
+  onSaved: (result: Omit<AnalysisResponse, 'provider'>) => void
   onCancel: () => void
 }
 
@@ -21,6 +21,7 @@ function toDrafts(items: ScoredItem[]): DraftItem[] {
     material: item.material === 'unknown' ? '' : item.material,
     condition: item.condition,
     confidence: item.confidence,
+    label: item.label,
   }))
 }
 
@@ -49,7 +50,9 @@ export function EditItemsPanel({ items, onSaved, onCancel }: Props) {
   }, [])
 
   function update(key: number, patch: Partial<DraftItem>) {
-    setDrafts((current) => current.map((d) => (d.key === key ? { ...d, ...patch } : d)))
+    // A new type makes the scan's description wrong ("red dress" for a skirt), so drop it.
+    const change = 'category' in patch ? { ...patch, label: null } : patch
+    setDrafts((current) => current.map((d) => (d.key === key ? { ...d, ...change } : d)))
   }
 
   function remove(key: number) {
@@ -66,7 +69,13 @@ export function EditItemsPanel({ items, onSaved, onCancel }: Props) {
     setSaving(true)
     try {
       const score = await scoreItems(
-        drafts.map(({ category, material, condition, confidence }) => ({ category, material, condition, confidence })),
+        drafts.map(({ category, material, condition, confidence, label }) => ({
+          category,
+          material,
+          condition,
+          confidence,
+          label,
+        })),
       )
       const offers = await getOffers(score.total_points)
       onSaved({ ...score, offers })

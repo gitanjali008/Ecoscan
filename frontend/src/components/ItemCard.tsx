@@ -11,13 +11,16 @@ type Props = {
 
 export function ItemCard({ item, showConfidence = true }: Props) {
   const material = item.material === 'unknown' ? 'Material unknown' : capitalize(item.material)
+  // The scan's description reads better than the bare category; the category still shows below it.
+  const title = capitalize(item.label ?? item.category)
+  const details = item.label ? `${capitalize(item.category)} · ${material}` : material
 
   return (
     <li className="rounded-3xl border border-sand bg-white/60 p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="font-display text-xl font-semibold">{capitalize(item.category)}</h3>
-          <p className="text-stone">{material}</p>
+          <h3 className="font-display text-xl font-semibold">{title}</h3>
+          <p className="text-stone">{details}</p>
         </div>
         <ConditionBadge condition={item.condition} />
       </div>
@@ -25,6 +28,8 @@ export function ItemCard({ item, showConfidence = true }: Props) {
       <div className="mt-4">
         <CarbonBar baselineKg={item.baseline_kg} actualKg={item.actual_kg} />
       </div>
+
+      {item.tip && <p className="mt-4 rounded-2xl bg-fern/15 px-4 py-3 text-sm text-bark">{item.tip}</p>}
 
       <div className="mt-4 flex items-center justify-between border-t border-sand pt-3 text-sm">
         <span className="text-stone">

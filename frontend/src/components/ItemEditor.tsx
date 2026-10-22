@@ -9,6 +9,8 @@ export type DraftItem = {
   material: string
   condition: Condition
   confidence: number
+  /** The scan's description, kept until the user changes the type. */
+  label: string | null
 }
 
 type Props = {

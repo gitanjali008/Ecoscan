@@ -87,6 +87,7 @@ def test_analyze_happy_path(client):
     assert body["total_carbon_kg"] == pytest.approx(sum(i["actual_kg"] for i in body["items"]))
     assert body["total_points"] == sum(i["points"] for i in body["items"])
     assert body["offers"]["points"] == body["total_points"]
+    assert body["provider"] == "mock"
     assert {"eligible", "locked"} <= set(body["offers"])
 
 
@@ -121,6 +122,8 @@ def test_analyze_without_a_file(client):
 
 
 class LabelledVision:
+    name = "gemini"
+
     def detect_items(self, image, content_type):
         return [DetectedItem(category="kurti", material="cotton", label="yellow block-print kurti")]
 
@@ -131,6 +134,11 @@ def test_analyze_returns_the_item_label(make_client):
     assert response.status_code == 200
     [item] = response.json()["items"]
     assert (item["category"], item["label"]) == ("kurti", "yellow block-print kurti")
+
+
+def test_analyze_says_which_provider_read_the_photo(make_client):
+    assert upload(make_client(), PNG).json()["provider"] == "mock"
+    assert upload(make_client(vision=LabelledVision()), PNG).json()["provider"] == "gemini"
 
 
 # /score

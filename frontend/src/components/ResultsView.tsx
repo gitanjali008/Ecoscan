@@ -24,6 +24,13 @@ export function ResultsView({ result, onUpdate, onScanAgain }: Props) {
 
   return (
     <section aria-labelledby="results-title" className="space-y-6 pt-4">
+      {result.provider === 'mock' && (
+        <p className="rounded-2xl border border-ochre/40 bg-ochre/10 px-4 py-3 text-sm text-bark">
+          <span className="font-semibold">Demo mode:</span> sample results. Add a Gemini or OpenAI key to scan real
+          photos.
+        </p>
+      )}
+
       <div>
         <h1 id="results-title" className="font-display text-3xl font-semibold sm:text-4xl">
           {reviewed ? `Your ${itemsLabel}` : `We found ${itemsLabel}`}
@@ -65,7 +72,8 @@ export function ResultsView({ result, onUpdate, onScanAgain }: Props) {
               onSaved={(updated) => {
                 setEditing(false)
                 setReviewed(true)
-                onUpdate(updated)
+                // Recalculating doesn't re-read the photo, so it was still read by the same provider.
+                onUpdate({ ...updated, provider: result.provider })
               }}
             />
           ) : (

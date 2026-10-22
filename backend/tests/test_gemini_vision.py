@@ -134,6 +134,7 @@ def test_factory_builds_gemini_provider_with_a_key_and_the_configured_model():
     )
 
     assert isinstance(provider, GeminiVisionProvider)
+    assert provider.name == "gemini"
     assert provider._model == "gemini-custom"
 
 

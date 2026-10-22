@@ -23,6 +23,8 @@ PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 20
 class FakeVision:
     """Returns fixed items and records what it was given."""
 
+    name = "fake"
+
     def __init__(self, items: list[DetectedItem]) -> None:
         self.items = items
         self.calls: list[tuple[bytes, str]] = []
@@ -53,6 +55,7 @@ def test_analyze_scores_items_and_finds_offers():
     assert result.offers.points == 95
     assert all(o.points_required <= 95 for o in result.offers.eligible)
     assert all(o.points_required > 95 for o in result.offers.locked)
+    assert result.provider == "fake"
 
 
 def test_no_items_raises_no_clothing_detected():

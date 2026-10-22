@@ -101,6 +101,9 @@ class AnalysisResponse(ScoreResponse):
     """Everything the UI needs after one scan, in a single response."""
 
     offers: OffersResponse
+    provider: str = Field(
+        ..., examples=["gemini"], description='The vision provider that read the photo; "mock" means sample results'
+    )
 
 
 class CarbonFactorsResponse(BaseModel):

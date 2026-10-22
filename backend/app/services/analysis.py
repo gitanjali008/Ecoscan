@@ -35,4 +35,4 @@ class AnalysisService:
 
         score = self._scoring.score(items)
         offers = self._offers.offers_for(score.total_points)
-        return AnalysisResponse(**score.model_dump(), offers=offers)
+        return AnalysisResponse(**score.model_dump(), offers=offers, provider=self._vision.name)

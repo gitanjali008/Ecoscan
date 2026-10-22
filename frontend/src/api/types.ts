@@ -9,6 +9,8 @@ export interface DetectedItem {
   material: string
   condition: Condition
   confidence: number
+  /** Short description from the scan, e.g. "red floral midi dress" */
+  label: string | null
 }
 
 /** An item sent to the API. Only category is required; the backend fills in the rest. */
@@ -22,6 +24,8 @@ export interface ScoredItem extends DetectedItem {
   /** baseline_kg - actual_kg, never below 0 */
   saved_kg: number
   points: number
+  /** One short, friendly eco tip for this item */
+  tip: string
 }
 
 export interface ScoreRequest {
@@ -57,6 +61,8 @@ export interface OffersResponse {
 /** Everything the UI needs after one scan. */
 export interface AnalysisResponse extends ScoreResponse {
   offers: OffersResponse
+  /** The vision provider that read the photo: "mock" means sample results */
+  provider: string
 }
 
 export interface CarbonFactorsResponse {

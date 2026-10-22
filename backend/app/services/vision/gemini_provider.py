@@ -19,6 +19,8 @@ from app.services.vision.prompt import USER_PROMPT, build_system_prompt, parse_i
 class GeminiVisionProvider:
     """VisionProvider that asks a Gemini model to list clothing items."""
 
+    name = "gemini"
+
     def __init__(
         self,
         model: str,

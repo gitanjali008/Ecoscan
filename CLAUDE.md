@@ -18,7 +18,7 @@ Frontend rules:
 - Mobile-first (camera is mostly used on phones).
 
 ## Status
-Backend: done. 275 pytest tests pass. Endpoints:
+Backend: done. 276 pytest tests pass. Endpoints:
 - GET  /                     redirects to /docs
 - GET  /api/health
 - POST /api/analyze          image upload -> items, carbon, points, offers
@@ -27,7 +27,7 @@ Backend: done. 275 pytest tests pass. Endpoints:
 - GET  /api/carbon-factors   the carbon assumptions
 Vision: mock (default), OpenAI or Gemini, chosen with VISION_PROVIDER.
 
-Frontend: done (F1–F9). 40 Vitest tests pass. Upload or camera capture
+Frontend: done (F1–F9). 48 Vitest tests pass. Upload or camera capture
 (resized to a JPEG in the browser), results per item, edit and rescore, offers with progress, loading and error states.
 
 Next: Deployment and Enhancements sections in README, screenshots.

@@ -37,9 +37,32 @@ it('sends the edited items to scoreItems, then fetches offers for the new points
   await user.click(screen.getAllByRole('button', { name: 'Remove' })[1])
   await user.click(screen.getByRole('button', { name: 'Recalculate' }))
 
-  expect(scoreItems).toHaveBeenCalledWith([{ category: 'jeans', material: '', condition: 'second-hand', confidence: 0.9 }])
+  expect(scoreItems).toHaveBeenCalledWith([
+    { category: 'jeans', material: '', condition: 'second-hand', confidence: 0.9, label: null },
+  ])
   expect(getOffers).toHaveBeenCalledWith(80)
   expect(onSaved).toHaveBeenCalledWith({ ...score, offers })
+})
+
+it('keeps the scan label unless the item type is changed', async () => {
+  const user = userEvent.setup()
+  const scoreItems = vi.spyOn(client, 'scoreItems').mockResolvedValue(score)
+  vi.spyOn(client, 'getOffers').mockResolvedValue(offers)
+  render(
+    <EditItemsPanel
+      items={[makeItem({ category: 'dress', label: 'red midi dress' }), makeItem({ category: 'jeans', label: 'blue jeans' })]}
+      onSaved={() => {}}
+      onCancel={() => {}}
+    />,
+  )
+
+  const [, secondType] = screen.getAllByLabelText('Type')
+  await user.clear(secondType)
+  await user.type(secondType, 'shorts')
+  await user.click(screen.getByRole('button', { name: 'Recalculate' }))
+
+  const [[sent]] = scoreItems.mock.calls
+  expect(sent.map((item) => item.label)).toEqual(['red midi dress', null])
 })
 
 it('asks for a type instead of calling the API when a category is empty', async () => {

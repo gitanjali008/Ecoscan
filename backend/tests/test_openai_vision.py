@@ -178,6 +178,7 @@ def test_factory_builds_openai_provider_with_a_key():
     provider = create_vision_provider(settings(vision_provider="openai", openai_api_key="sk-test"), CATEGORIES)
 
     assert isinstance(provider, OpenAIVisionProvider)
+    assert provider.name == "openai"
     assert "Known categories: t-shirt, jeans" in provider._system_prompt
 
 
@@ -185,6 +186,7 @@ def test_factory_builds_mock_provider():
     provider = create_vision_provider(settings(vision_provider="mock", openai_api_key=None), CATEGORIES)
 
     assert isinstance(provider, MockVisionProvider)
+    assert provider.name == "mock"
 
 
 def test_all_providers_are_registered():

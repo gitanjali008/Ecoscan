@@ -10,4 +10,7 @@ class VisionProvider(Protocol):
     so providers can assume they get real image bytes.
     """
 
+    #: Short id sent to the client with each scan, e.g. "mock", "openai", "gemini".
+    name: str
+
     def detect_items(self, image: bytes, content_type: str) -> list[DetectedItem]: ...

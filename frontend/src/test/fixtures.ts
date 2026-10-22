@@ -10,10 +10,12 @@ export function makeItem(overrides: Partial<ScoredItem> = {}): ScoredItem {
     material: 'cotton',
     condition: 'new',
     confidence: 0.9,
+    label: null,
     baseline_kg: 5,
     actual_kg: 5,
     saved_kg: 0,
     points: 0,
+    tip: 'Next time, try it second-hand to save about 4 kg of CO2.',
     ...overrides,
   }
 }

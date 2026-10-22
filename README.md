@@ -127,7 +127,7 @@ camera app, so it works over plain HTTP. The desktop webcam view needs
 
 ## 🧪 Running the tests
 
-**Backend** (275 tests)
+**Backend** (276 tests)
 ```bash
 cd backend
 pytest
@@ -136,7 +136,7 @@ Tests never call the real OpenAI or Gemini APIs: both providers are tested with 
 client, and API tests replace the vision provider and settings through
 FastAPI's `dependency_overrides`. They also ignore your local `.env`.
 
-**Frontend** (40 tests)
+**Frontend** (48 tests)
 ```bash
 cd frontend
 npm test
@@ -144,7 +144,8 @@ npm test
 Tests run in jsdom with React Testing Library. `fetch` and the API client are
 mocked, so the backend does not need to be running. They cover client-side file
 checks, resizing photos before upload, API error parsing, the results summary,
-offers (including redeeming) and editing items before recalculating.
+item cards (label and eco tip), the demo-mode banner, offers (including
+redeeming) and editing items before recalculating.
 
 ## 📡 API reference
 
@@ -153,7 +154,7 @@ All endpoints are under `/api`.
 | Method | Path | Input | Output | Error codes |
 |---|---|---|---|---|
 | `GET` | `/api/health` | none | `{"status": "ok"}` | none |
-| `POST` | `/api/analyze` | multipart form, field `file`: JPEG, PNG or WebP, max 10 MB | Items with carbon, points and a tip, totals, and offers | `400 empty_image`, `413 image_too_large`, `415 invalid_image`, `422 no_clothing_detected`, `422 validation_error`, `502 vision_service_error` |
+| `POST` | `/api/analyze` | multipart form, field `file`: JPEG, PNG or WebP, max 10 MB | Items with carbon, points and a tip, totals, offers, and the `provider` that read the photo (`mock` = sample results) | `400 empty_image`, `413 image_too_large`, `415 invalid_image`, `422 no_clothing_detected`, `422 validation_error`, `502 vision_service_error` |
 | `POST` | `/api/score` | JSON `{"items": [{"category", "material", "condition", "confidence", "label"}]}`, at least one item (only `category` is required) | Items with carbon, points and a tip, and totals | `422 validation_error` |
 | `GET` | `/api/offers?points=<int ≥ 0>` | Query `points` | `{"points", "eligible": [...], "locked": [... with points_needed]}` | `422 validation_error` |
 | `GET` | `/api/carbon-factors` | none | The carbon tables below, as JSON | none |
@@ -197,7 +198,8 @@ only a safety net. Originals over 30 MB are refused in the browser.
                   "description": "...", "points_required": 30}],
     "locked": [{"id": "repair-free", "title": "Free clothing repair", "partner": "StitchBack Repairs",
                 "description": "...", "points_required": 100, "points_needed": 20}]
-  }
+  },
+  "provider": "gemini"
 }
 ```
 </details>
