@@ -8,7 +8,7 @@
 export const MAX_ORIGINAL_MB = 30
 
 /** Keep in sync with MAX_IMAGE_MB in backend/.env. Checked on the resized JPEG. */
-export const MAX_UPLOAD_MB = 5
+export const MAX_UPLOAD_MB = 10
 
 const MB = 1024 * 1024
 

@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     openai_api_key: str | None = None
     openai_model: str = "gpt-4o-mini"
     openai_timeout_seconds: float = 30
-    max_image_mb: float = 5
+    max_image_mb: float = 10
     points_per_kg: float = 10
     cors_origins: str = "http://localhost:5173"
 

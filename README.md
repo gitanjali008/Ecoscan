@@ -86,7 +86,7 @@ The default `.env` uses the **mock** vision provider, so the app runs without an
 | `OPENAI_API_KEY` | *(empty)* | Required when `VISION_PROVIDER=openai`. Never commit it. |
 | `OPENAI_MODEL` | `gpt-4o-mini` | Any OpenAI model that accepts images and JSON mode |
 | `OPENAI_TIMEOUT_SECONDS` | `30` | Timeout for one OpenAI request |
-| `MAX_IMAGE_MB` | `5` | Largest upload accepted |
+| `MAX_IMAGE_MB` | `10` | Largest upload accepted (a safety net: the web app sends resized JPEGs, usually under 1 MB) |
 | `POINTS_PER_KG` | `10` | Reward points per kg of CO2e saved |
 | `CORS_ORIGINS` | `http://localhost:5173` | Comma-separated origins allowed to call the API (the Vite dev server) |
 
@@ -124,7 +124,7 @@ camera app, so it works over plain HTTP. The desktop webcam view needs
 
 ## 🧪 Running the tests
 
-**Backend** (151 tests)
+**Backend** (153 tests)
 ```bash
 cd backend
 pytest
@@ -150,7 +150,7 @@ All endpoints are under `/api`.
 | Method | Path | Input | Output | Error codes |
 |---|---|---|---|---|
 | `GET` | `/api/health` | none | `{"status": "ok"}` | none |
-| `POST` | `/api/analyze` | multipart form, field `file`: JPEG, PNG or WebP, max 5 MB | Items with carbon and points, totals, and offers | `400 empty_image`, `413 image_too_large`, `415 invalid_image`, `422 no_clothing_detected`, `422 validation_error`, `502 vision_service_error` |
+| `POST` | `/api/analyze` | multipart form, field `file`: JPEG, PNG or WebP, max 10 MB | Items with carbon and points, totals, and offers | `400 empty_image`, `413 image_too_large`, `415 invalid_image`, `422 no_clothing_detected`, `422 validation_error`, `502 vision_service_error` |
 | `POST` | `/api/score` | JSON `{"items": [{"category", "material", "condition", "confidence"}]}`, at least one item | Items with carbon and points, and totals | `422 validation_error` |
 | `GET` | `/api/offers?points=<int ≥ 0>` | Query `points` | `{"points", "eligible": [...], "locked": [... with points_needed]}` | `422 validation_error` |
 | `GET` | `/api/carbon-factors` | none | The carbon tables below, as JSON | none |
@@ -160,7 +160,7 @@ item as second-hand) and get a new score without uploading the photo again.
 
 **Every error has the same shape**, so the frontend only needs to read `error.code`:
 ```json
-{"error": {"code": "image_too_large", "message": "The image is too large. The limit is 5 MB."}}
+{"error": {"code": "image_too_large", "message": "The image is too large. The limit is 10 MB."}}
 ```
 Validation errors also include a `details` list showing which field is wrong.
 

@@ -18,7 +18,7 @@ Frontend rules:
 - Mobile-first (camera is mostly used on phones).
 
 ## Status
-Backend: done. 151 pytest tests pass. Endpoints:
+Backend: done. 153 pytest tests pass. Endpoints:
 - GET  /                     redirects to /docs
 - GET  /api/health
 - POST /api/analyze          image upload -> items, carbon, points, offers
