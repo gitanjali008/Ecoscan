@@ -18,6 +18,7 @@ shows offers you can unlock with those points.
 - [Eco tips](#-eco-tips)
 - [Code structure](#-code-structure)
 - [Frontend](#-frontend)
+- [More docs](#-more-docs)
 - [Deployment](#-deployment)
 - [Enhancements](#-enhancements)
 
@@ -528,6 +529,13 @@ frontend/src/
 - **Accessible by default.** Real buttons and labels, a native `<dialog>` for the
   camera, `role="progressbar"`, `role="alert"` and `role="status"` for live updates.
   Tests find elements the same way a screen reader would.
+
+## 📚 More docs
+
+- [Architecture](docs/ARCHITECTURE.md): layers, the flow of a scan and a rescore, the carbon formula with a worked example, error codes, and how tests avoid real AI calls
+- [API](docs/API.md): every endpoint with an example request and JSON response
+- [Sample images](docs/sample-images/): a few photos to try a scan with
+- Demo video: _link coming soon_
 
 ## ☁️ Deployment
 
